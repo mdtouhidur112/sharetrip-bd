@@ -1,0 +1,108 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Compass, SlidersHorizontal, PlaneTakeoff, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { HOW_IT_WORKS_STEPS } from '../data/travelData';
+
+export const HowItWorksSection = ({ onExploreTours }) => {
+  const getStepIcon = (iconName) => {
+    switch (iconName) {
+      case 'Compass':
+        return <Compass className="w-7 h-7 text-teal-700 dark:text-teal-300" />;
+      case 'SlidersHorizontal':
+        return <SlidersHorizontal className="w-7 h-7 text-cyan-700 dark:text-cyan-300" />;
+      case 'PlaneTakeoff':
+        return <PlaneTakeoff className="w-7 h-7 text-emerald-700 dark:text-emerald-300" />;
+      default:
+        return <Sparkles className="w-7 h-7 text-teal-700 dark:text-teal-300" />;
+    }
+  };
+
+  return (
+    <section id="about" className="relative py-[5px] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      
+      {/* Background Decorative Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-transparent blur-3xl rounded-full pointer-events-none" />
+
+      {/* Section Header */}
+      <div className="text-center max-w-2xl mx-auto mb-16 relative z-10">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
+          <Sparkles className="w-3.5 h-3.5" />
+          সহজ ও স্বাচ্ছন্দ্যময় ভ্রমণ
+        </div>
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+          কার্যপদ্ধতি
+        </h2>
+        <p className="mt-3 text-black/70 dark:text-slate-300 text-sm sm:text-base font-medium">
+          শুরুর পরিকল্পনা থেকে গন্তব্যে পৌঁছানো পর্যন্ত—ব্যক্তিগত ভ্রমণ স্থপতিদের পরিচালনায় উপভোগ করুন শতভাগ নিশ্চিন্ত বুকিং অভিজ্ঞতা।
+        </p>
+      </div>
+
+      {/* 3-Step Glass Bento Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+        {HOW_IT_WORKS_STEPS.map((item, idx) => (
+          <motion.div
+            key={item.step}
+            whileHover={{ y: -6, scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.8 }}
+            className={`
+              group relative p-8 rounded-3xl
+              bg-[#5C6977]/85 dark:bg-slate-900/40 backdrop-blur-2xl
+              border border-[#69EBDA]/35 dark:border-white/20
+              shadow-[0_10px_30px_0_rgba(15,23,42,0.18),inset_0_1px_1px_0_rgba(255,255,255,0.25)]
+              hover:border-[#69EBDA]
+              hover:shadow-[0_20px_50px_rgba(105,235,218,0.3)]
+              transition-all duration-300
+              flex flex-col justify-between
+            `}
+          >
+            {/* Top Indicator & Step Badge */}
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                {/* Step Emblem */}
+                <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/20 flex items-center justify-center group-hover:bg-[#69EBDA]/20 group-hover:border-[#69EBDA]/50 transition-all duration-300 shadow-md">
+                  {getStepIcon(item.icon)}
+                </div>
+
+                {/* Big Futuristic Step Number */}
+                <span className="text-4xl sm:text-5xl font-black text-white/25 font-['Outfit',sans-serif] group-hover:text-[#69EBDA]/50 transition-colors">
+                  {item.step}
+                </span>
+              </div>
+
+              {/* Title & Tagline */}
+              <div className="inline-block px-3 py-1 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 text-[11px] font-extrabold text-[#69EBDA] mb-2">
+                {item.badge}
+              </div>
+
+              <h3 className="text-2xl font-extrabold text-white mb-2 font-['Outfit',sans-serif] group-hover:text-[#69EBDA] transition-colors">
+                {item.title}
+              </h3>
+
+              <p className="text-xs text-[#69EBDA] font-bold mb-3">
+                {item.tagline}
+              </p>
+
+              <p className="text-slate-100 text-sm leading-relaxed font-medium">
+                {item.description}
+              </p>
+            </div>
+
+            {/* Bottom Connector indicator */}
+            <div className="mt-8 pt-4 border-t border-white/15 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 text-slate-200 font-bold">
+                <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
+                শতভাগ প্রিমিয়াম সেবা
+              </span>
+              <span className="text-[#69EBDA] font-extrabold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                ধাপ {idx + 1} / ৩ <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </div>
+
+          </motion.div>
+        ))}
+      </div>
+
+    </section>
+  );
+};

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2369EBDA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m4.93 4.93 4.24 4.24'/><path d='m14.83 9.17 4.24-4.24'/><path d='m14.83 14.83 4.24 4.24'/><path d='m9.17 14.83-4.24 4.24'/><circle cx='12' cy='12' r='4'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aetheria Travels — Luxury & Curated World Voyages</title>
+    <!-- Google Fonts: Plus Jakarta Sans for crisp, modern VisionOS typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#E2E8F0] dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-[#69EBDA]/30 selection:text-slate-900 min-h-screen overflow-x-hidden font-['Plus_Jakarta_Sans','Hind_Siliguri',sans-serif] transition-colors duration-300">
+    <div id="root"></div>
+    <!-- Hidden Google Translate Element for automated bilingual translation -->
+    <div id="google_translate_element" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;"></div>
+    <script type="text/javascript">
+      // Set default language cookie to English if user hasn't explicitly set another language
+      try {
+        var savedLang = localStorage.getItem('aetheria_language');
+        if (!savedLang) {
+          localStorage.setItem('aetheria_language', 'en');
+          savedLang = 'en';
+        }
+        if (savedLang === 'en') {
+          document.cookie = 'googtrans=/bn/en; path=/;';
+        } else {
+          document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        }
+      } catch (e) {}
+
+      function googleTranslateElementInit() {
+        if (window.google && window.google.translate) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'bn',
+            includedLanguages: 'en,bn',
+            autoDisplay: false
+          }, 'google_translate_element');
+        }
+      }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
