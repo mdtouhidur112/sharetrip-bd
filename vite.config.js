@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  envPrefix: ['VITE_', 'admin_', 'FIREBASE_'],
+  envPrefix: ['VITE_', 'admin_', 'FIREBASE_', 'SUPABASE_'],
   server: {
     port: 5173,
     host: true
