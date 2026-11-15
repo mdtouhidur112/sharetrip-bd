@@ -64,6 +64,10 @@ export const AuthProvider = ({ children }) => {
 
   // Real-time Firebase Authentication State Listener
   useEffect(() => {
+    if (!auth) {
+      setIsFirebaseInitialized(true);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const displayName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Voyager';

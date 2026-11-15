@@ -22,10 +22,26 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || import.meta.env.FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase App singleton
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Initialize Firebase App singleton safely (never crash entire app if env vars are missing)
+const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+let app = null;
+let auth = null;
+let googleProvider = null;
+
+if (isFirebaseConfigured) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
+  } catch (err) {
+    console.warn('Firebase initialization skipped:', err?.message || err);
+    app = null;
+    auth = null;
+    googleProvider = null;
+  }
+} else {
+  console.warn('Firebase env variables missing (VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID).');
+}
 
 // Friendly Bengali Error Messages for Firebase Auth
 export const getFirebaseErrorMessage = (error) => {
