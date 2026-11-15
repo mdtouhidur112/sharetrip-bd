@@ -264,8 +264,11 @@ export const StorageService = {
   // -------------------------------------------------------------
   // SUPABASE LIVE CLOUD SYNC ENGINE
   // -------------------------------------------------------------
+  _syncPromise: null,
   initSupabaseSync: async () => {
     if (!supabase) return;
+    if (StorageService._syncPromise) return StorageService._syncPromise;
+    StorageService._syncPromise = (async () => {
     try {
       // 1. Packages (Sync directly from Supabase - Zero Demo Injection)
       const { data: dbPackages, error: pkgError } = await supabase.from('packages').select('*');
@@ -421,6 +424,8 @@ export const StorageService = {
     } catch (e) {
       console.warn('Supabase sync notice: Operating in resilient cache mode', e);
     }
+    })();
+    return StorageService._syncPromise;
   },
 
   _realtimeChannel: null,
@@ -2020,6 +2025,7 @@ export const StorageService = {
       targetUser = {
         ...users[index],
         ...userPayload,
+        id: users[index].id || userPayload.id,
         role: users[index].role || userPayload.role || 'user'
       };
       users[index] = targetUser;
@@ -2043,9 +2049,24 @@ export const StorageService = {
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('users').upsert(userToRow(targetUser), { onConflict: 'email' });
-        if (error) console.error('Supabase user upsert ERROR:', error);
-        else console.log('Supabase user synced successfully:', targetUser.email);
+        const row = userToRow(targetUser);
+        const { error } = await supabase.from('users').upsert(row, { onConflict: 'email' });
+        if (error) {
+          console.warn('Supabase user upsert notice, trying email update:', error.message);
+          const { error: updErr } = await supabase
+            .from('users')
+            .update({
+              name: row.name,
+              phone: row.phone,
+              avatar: row.avatar,
+              role: row.role,
+              tier: row.tier,
+              country: row.country,
+              status: row.status
+            })
+            .eq('email', row.email);
+          if (updErr) console.error('Supabase user update ERROR:', updErr);
+        }
       } catch (err) {
         console.error('Supabase user sync exception:', err);
       }

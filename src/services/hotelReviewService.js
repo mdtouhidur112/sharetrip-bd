@@ -134,8 +134,11 @@ export const HotelReviewService = {
   // -------------------------------------------------------------
   // SUPABASE REALTIME SYNC ENGINE
   // -------------------------------------------------------------
+  _syncPromise: null,
   initSupabaseSync: async () => {
     if (!supabase) return;
+    if (HotelReviewService._syncPromise) return HotelReviewService._syncPromise;
+    HotelReviewService._syncPromise = (async () => {
     try {
       // 1. Fetch live hotel reviews from Supabase
       const { data: dbReviews, error } = await supabase
@@ -168,6 +171,8 @@ export const HotelReviewService = {
     } catch (err) {
       console.warn('HotelReviewService Supabase sync notice:', err);
     }
+    })();
+    return HotelReviewService._syncPromise;
   },
 
   startRealtimeSubscription: () => {

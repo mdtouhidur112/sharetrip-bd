@@ -1,34 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AmbientBackground } from './components/AmbientBackground';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
-import { HeroFilteredResults } from './components/HeroFilteredResults';
 import { DestinationBentoGrid } from './components/DestinationBentoGrid';
-import { AllDestinationsPage } from './components/AllDestinationsPage';
 import { HowItWorksSection } from './components/HowItWorksSection';
 import { CoreServicesSection } from './components/CoreServicesSection';
-import { ServicesPage } from './components/ServicesPage';
 import { ClientReviewsSection } from './components/ClientReviewsSection';
 import { ContactBentoSection } from './components/ContactBentoSection';
-import { SingleHotelDetailPage } from './components/SingleHotelDetailPage';
 import { SingleHotelsGrid } from './components/SingleHotelsGrid';
 import { TransportShowcaseSection } from './components/TransportShowcaseSection';
-import { TransportCategoryPage } from './components/TransportCategoryPage';
-import { BookingInquiryWidget } from './components/BookingInquiryWidget';
 import { FloatingContactDock } from './components/FloatingContactDock';
-import { BookCallModal } from './components/BookCallModal';
 import { BrandSection } from './components/BrandSection';
-import { AboutPage } from './components/AboutPage';
 import { Footer } from './components/Footer';
-import { AdminDashboard } from './components/admin/AdminDashboard';
-import { AdminLoginModal } from './components/admin/AdminLoginModal';
 import { AdminAuthService } from './services/adminAuthService';
 import { StorageService } from './services/storageService';
-import { AuthModal } from './components/AuthModal';
-import { WishlistModal, UserProfileModal } from './components/UserModals';
-import { MyBookingsPage } from './components/MyBookingsPage';
 import { useAuth } from './context/AuthContext';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
+
+// Lazy-loaded pages & modals for optimal initial bundle size & fast first paint
+const HeroFilteredResults = lazy(() => import('./components/HeroFilteredResults').then(m => ({ default: m.HeroFilteredResults })));
+const AllDestinationsPage = lazy(() => import('./components/AllDestinationsPage').then(m => ({ default: m.AllDestinationsPage })));
+const ServicesPage = lazy(() => import('./components/ServicesPage').then(m => ({ default: m.ServicesPage })));
+const SingleHotelDetailPage = lazy(() => import('./components/SingleHotelDetailPage').then(m => ({ default: m.SingleHotelDetailPage })));
+const TransportCategoryPage = lazy(() => import('./components/TransportCategoryPage').then(m => ({ default: m.TransportCategoryPage })));
+const BookingInquiryWidget = lazy(() => import('./components/BookingInquiryWidget').then(m => ({ default: m.BookingInquiryWidget })));
+const BookCallModal = lazy(() => import('./components/BookCallModal').then(m => ({ default: m.BookCallModal })));
+const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ default: m.AboutPage })));
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminLoginModal = lazy(() => import('./components/admin/AdminLoginModal').then(m => ({ default: m.AdminLoginModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const WishlistModal = lazy(() => import('./components/UserModals').then(m => ({ default: m.WishlistModal })));
+const UserProfileModal = lazy(() => import('./components/UserModals').then(m => ({ default: m.UserProfileModal })));
+const MyBookingsPage = lazy(() => import('./components/MyBookingsPage').then(m => ({ default: m.MyBookingsPage })));
+
+const LazyFallback = () => (
+  <div className="min-h-[40vh] flex items-center justify-center p-8">
+    <div className="w-8 h-8 rounded-full border-2 border-[#69EBDA] border-t-transparent animate-spin" />
+  </div>
+);
 
 export default function App() {
   const { user, activeUserModal, closeUserModal } = useAuth();
@@ -312,6 +321,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="relative z-10">
+        <Suspense fallback={<LazyFallback />}>
         {isAdminMode ? (
           /* Step 5: Liquid Glass Admin Operations Dashboard */
           <AdminDashboard
@@ -494,6 +504,7 @@ export default function App() {
             )}
           </>
         )}
+        </Suspense>
       </main>
 
       {/* Partner Brand Section (Directly above Footer) */}
@@ -517,49 +528,51 @@ export default function App() {
       )}
 
       {/* Global Booking / Inquiry Modal (Triggered from Floating Dock or Nav) */}
-      {isGlobalBookingModalOpen && (
-        <BookingInquiryWidget
-          pkg={null}
-          isOpenAsModal={true}
-          onClose={() => setIsGlobalBookingModalOpen(false)}
-          onSuccess={(data) => {
-            StorageService.saveBooking(data);
-            showToast(`অনুরোধ #${data.id} সফলভাবে সংরক্ষিত হয়েছে!`);
+      <Suspense fallback={null}>
+        {isGlobalBookingModalOpen && (
+          <BookingInquiryWidget
+            pkg={null}
+            isOpenAsModal={true}
+            onClose={() => setIsGlobalBookingModalOpen(false)}
+            onSuccess={(data) => {
+              StorageService.saveBooking(data);
+              showToast(`অনুরোধ #${data.id} সফলভাবে সংরক্ষিত হয়েছে!`);
+            }}
+          />
+        )}
+
+        {/* Interactive Book a Call Modal */}
+        <BookCallModal
+          isOpen={isBookCallOpen}
+          onClose={() => setIsBookCallOpen(false)}
+        />
+
+        {/* Complete Interactive Liquid Glass Auth Modal */}
+        <AuthModal />
+
+        {/* User Profile Modals (Wishlist, Settings) */}
+        <WishlistModal
+          isOpen={activeUserModal === 'wishlist'}
+          onClose={closeUserModal}
+          onSelectHotel={(hotel) => {
+            setSelectedHotel(hotel);
+            setIsAdminMode(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         />
-      )}
 
-      {/* Interactive Book a Call Modal */}
-      <BookCallModal
-        isOpen={isBookCallOpen}
-        onClose={() => setIsBookCallOpen(false)}
-      />
+        <UserProfileModal
+          isOpen={activeUserModal === 'settings'}
+          onClose={closeUserModal}
+        />
 
-      {/* Complete Interactive Liquid Glass Auth Modal */}
-      <AuthModal />
-
-      {/* User Profile Modals (Wishlist, Settings) */}
-      <WishlistModal
-        isOpen={activeUserModal === 'wishlist'}
-        onClose={closeUserModal}
-        onSelectHotel={(hotel) => {
-          setSelectedHotel(hotel);
-          setIsAdminMode(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
-
-      <UserProfileModal
-        isOpen={activeUserModal === 'settings'}
-        onClose={closeUserModal}
-      />
-
-      {/* Admin Login Modal (Triggered on /admin route or admin portal click) */}
-      <AdminLoginModal
-        isOpen={isAdminLoginModalOpen}
-        onClose={handleCloseAdminLoginModal}
-        onLoginSuccess={handleAdminLoginSuccess}
-      />
+        {/* Admin Login Modal (Triggered on /admin route or admin portal click) */}
+        <AdminLoginModal
+          isOpen={isAdminLoginModalOpen}
+          onClose={handleCloseAdminLoginModal}
+          onLoginSuccess={handleAdminLoginSuccess}
+        />
+      </Suspense>
 
       {/* Global Liquid Glass Toast Notification */}
       {toastMessage && (

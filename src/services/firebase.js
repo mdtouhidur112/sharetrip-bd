@@ -70,6 +70,8 @@ export const getFirebaseErrorMessage = (error) => {
       return 'ব্রাউজার পপ-আপ ব্লক করেছে। অনুগ্রহ করে পপ-আপ অনুমোদন করুন।';
     case 'auth/operation-not-allowed':
       return 'ফায়ারবেসে এই সাইন-ইন মেথডটি এনাবল করা নেই। Firebase কনসোলে Email/Password বা Google সাইন-ইন চালু করুন।';
+    case 'auth/unauthorized-domain':
+      return 'এই ডোমেইনটি Firebase Authorized Domains-এ অনুমোদিত নয়। Firebase Console → Authentication → Settings → Authorized domains-এ গিয়ে localhost এবং আপনার লাইভ ডোমেইন যুক্ত করুন।';
     default:
       return error?.message || 'অথেনটিকেশন প্রক্রিয়ায় একটি ত্রুটি হয়েছে। আবার চেষ্টা করুন।';
   }

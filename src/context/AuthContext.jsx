@@ -68,10 +68,47 @@ export const AuthProvider = ({ children }) => {
       setIsFirebaseInitialized(true);
       return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+
+    const handleUsersUpdated = () => {
+      setUser((prev) => {
+        if (!prev?.email) return prev;
+        const users = StorageService.getUsers();
+        const found = users.find((u) => u.email?.toLowerCase() === prev.email.toLowerCase());
+        if (!found) return prev;
+        const nextAvatar = found.avatar || prev.avatar;
+        const nextName = found.name || prev.name;
+        const nextPhone = found.phone || prev.phone;
+        const isNormalAdmin = found.role === 'normal_admin';
+        const nextRole = isNormalAdmin ? 'normal_admin' : (prev.role === 'normal_admin' ? 'client' : prev.role);
+        if (
+          nextAvatar === prev.avatar &&
+          nextName === prev.name &&
+          nextPhone === prev.phone &&
+          nextRole === prev.role
+        ) {
+          return prev;
+        }
+        const merged = {
+          ...prev,
+          name: nextName,
+          firstName: nextName.split(' ')[0] || prev.firstName,
+          phone: nextPhone,
+          avatar: nextAvatar,
+          role: nextRole
+        };
+        try {
+          localStorage.setItem(AUTH_USER_KEY, JSON.stringify(merged));
+        } catch (e) {}
+        return merged;
+      });
+    };
+
+    window.addEventListener('app:users-updated', handleUsersUpdated);
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        await StorageService.initSupabaseSync().catch(() => {});
         const displayName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Voyager';
-        const firstName = displayName.split(' ')[0] || 'Voyager';
         const isNormalAdmin = StorageService.isNormalAdmin(firebaseUser.email);
 
         let localProfile = {};
@@ -85,14 +122,22 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (e) {}
 
+        let dbUserProfile = null;
+        try {
+          const syncedUsers = StorageService.getUsers();
+          dbUserProfile = syncedUsers.find(
+            (u) => u.email?.toLowerCase() === firebaseUser.email?.toLowerCase()
+          );
+        } catch (e) {}
+
         const mappedUser = {
           id: firebaseUser.uid,
           uid: firebaseUser.uid,
-          name: displayName,
-          firstName,
+          name: dbUserProfile?.name || displayName,
+          firstName: (dbUserProfile?.name || displayName).split(' ')[0] || 'Voyager',
           email: firebaseUser.email,
-          phone: firebaseUser.phoneNumber || localProfile.phone || '+8801700000000',
-          avatar: firebaseUser.photoURL || localProfile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          phone: dbUserProfile?.phone || firebaseUser.phoneNumber || localProfile.phone || '+8801700000000',
+          avatar: dbUserProfile?.avatar || localProfile.avatar || firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
           role: isNormalAdmin ? 'normal_admin' : (localProfile.role || 'client'),
           membership: isNormalAdmin ? 'নরমাল অ্যাডমিন' : (localProfile.membership || 'সদস্য পরিব্রাজক'),
           joinedDate: localProfile.joinedDate || 'Firebase Verified',
@@ -118,7 +163,10 @@ export const AuthProvider = ({ children }) => {
       setIsFirebaseInitialized(true);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      window.removeEventListener('app:users-updated', handleUsersUpdated);
+    };
   }, []);
 
   // Save auth state & sync with users directory
@@ -316,12 +364,15 @@ export const AuthProvider = ({ children }) => {
 
   // Update Profile
   const updateProfile = async (updatedFields) => {
-    if (user && user.isFirebaseUser && auth.currentUser) {
+    if (user && user.isFirebaseUser && auth && auth.currentUser) {
       try {
-        if (updatedFields.name) {
-          await updateFirebaseProfile(auth.currentUser, {
-            displayName: updatedFields.name
-          });
+        const fbUpdates = {};
+        if (updatedFields.name) fbUpdates.displayName = updatedFields.name;
+        if (updatedFields.avatar && /^https?:\/\//i.test(updatedFields.avatar)) {
+          fbUpdates.photoURL = updatedFields.avatar;
+        }
+        if (Object.keys(fbUpdates).length > 0) {
+          await updateFirebaseProfile(auth.currentUser, fbUpdates);
         }
       } catch (e) {
         console.warn('Could not update profile in Firebase:', e);

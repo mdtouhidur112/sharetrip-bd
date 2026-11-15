@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { StorageService } from '../services/storageService';
+import { uploadMediaFile } from '../services/supabaseClient';
 
 // =========================================================================
 // 1. MY BOOKINGS & INQUIRIES MODAL
@@ -415,11 +416,22 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [avatarLink, setAvatarLink] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [passportCountry, setPassportCountry] = useState(user?.passportCountry || 'Bangladesh');
 
   // Contact Credentials (Email & Phone)
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
+
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setAvatar(user.avatar || '');
+      setPassportCountry(user.passportCountry || 'Bangladesh');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+    }
+  }, [user, isOpen]);
   
   // Password Management
   const [currentPassword, setCurrentPassword] = useState('');
@@ -657,22 +669,29 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                         {/* 1. Device File Upload */}
                         <label className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-white cursor-pointer transition-all">
                           <Upload className="w-3.5 h-3.5 text-[#69EBDA]" />
-                          <span>ডিভাইস থেকে ছবি আপলোড করুন</span>
+                          <span>{isUploadingAvatar ? 'আপলোড হচ্ছে...' : 'ডিভাইস থেকে ছবি আপলোড করুন'}</span>
                           <input
                             type="file"
                             accept="image/*"
+                            disabled={isUploadingAvatar}
                             className="hidden"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  if (event.target?.result) {
-                                    setAvatar(event.target.result);
-                                    showStatus('ডিভাইস থেকে প্রোফাইল ছবি যুক্ত করা হয়েছে!');
-                                  }
-                                };
-                                reader.readAsDataURL(file);
+                              if (!file) return;
+                              setIsUploadingAvatar(true);
+                              try {
+                                const res = await uploadMediaFile(file, 'users');
+                                const uploadedUrl = typeof res === 'string' ? res : res?.url;
+                                if (uploadedUrl) {
+                                  setAvatar(uploadedUrl);
+                                  await updateProfile({ avatar: uploadedUrl });
+                                  showStatus('প্রোফাইল ছবি ডাটাবেজে সেভ করা হয়েছে!');
+                                }
+                              } catch (err) {
+                                showStatus(`আপলোড ব্যর্থ হয়েছে: ${err?.message || 'আবার চেষ্টা করুন'}`);
+                              } finally {
+                                setIsUploadingAvatar(false);
+                                e.target.value = '';
                               }
                             }}
                           />

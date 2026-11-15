@@ -7,5 +7,20 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'motion-vendor': ['framer-motion'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth'],
+          'icons-vendor': ['lucide-react'],
+          'pdf-vendor': ['jspdf', 'html2canvas']
+        }
+      }
+    }
   }
 });
