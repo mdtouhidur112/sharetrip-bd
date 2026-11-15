@@ -188,7 +188,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
 
       const col2Body =
         serviceCategory === 'Transport'
-          ? `${[bk.pickup, bk.dropoff].filter(Boolean).join(' → ') || bk.destination || 'Scheduled Route'}<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(dateStr)}${bk.arrivalTime ? ` (${escapeHtml(bk.arrivalTime)})` : ''}</div>`
+          ? `${[bk.pickup || bk.routeFrom, bk.dropoff || bk.routeTo].filter(Boolean).join(' → ') || bk.destination || 'Scheduled Route'}<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(dateStr)}${bk.arrivalTime ? ` (${escapeHtml(bk.arrivalTime)})` : ''}</div>`
           : serviceCategory === 'Restaurant'
             ? `${escapeHtml(dateStr)}${bk.mealPlan ? `<div style="font-size:11px;color:#0d9488;font-weight:700;margin-top:2px;">${escapeHtml(bk.mealPlan)}</div>` : ''}`
             : serviceCategory === 'Tour Package'
@@ -197,7 +197,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
 
       const col3Body =
         serviceCategory === 'Transport'
-          ? `${bk.seats ? `${escapeHtml(bk.seats)} Seat(s)` : escapeHtml(guestStr)}${bk.vehicleType ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(bk.vehicleType)}</div>` : ''}`
+          ? `${bk.seats ? `${escapeHtml(bk.seats)} Seat(s)` : escapeHtml(guestStr)}${bk.tripType ? `<div style="font-size:11px;color:#0d9488;font-weight:700;margin-top:2px;">Trip: ${escapeHtml(bk.tripType)}</div>` : ''}${bk.vehicleType ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(bk.vehicleType)}</div>` : ''}`
           : serviceCategory === 'Restaurant'
             ? `${escapeHtml(guestStr)}`
             : serviceCategory === 'Tour Package'

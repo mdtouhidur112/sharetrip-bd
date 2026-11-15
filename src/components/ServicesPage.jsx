@@ -29,6 +29,7 @@ export const ServicesPage = ({
   const [hotels, setHotels] = useState(() => StorageService.getHotels());
   const [transports, setTransports] = useState(() => StorageService.getTransports());
   const [restaurants, setRestaurants] = useState(() => StorageService.getRestaurants());
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
 
   useEffect(() => {
     if (initialTab) {
@@ -44,17 +45,20 @@ export const ServicesPage = ({
     const syncHotels = () => setHotels(StorageService.getHotels());
     const syncTransports = () => setTransports(StorageService.getTransports());
     const syncRestaurants = () => setRestaurants(StorageService.getRestaurants());
+    const syncServicesControl = () => setServicesControl(StorageService.getServicesControl());
 
     window.addEventListener('app:hotels-updated', syncHotels);
     window.addEventListener('app:hotel-reviews-updated', syncHotels);
     window.addEventListener('app:transports-updated', syncTransports);
     window.addEventListener('app:restaurants-updated', syncRestaurants);
+    window.addEventListener('app:services-control-updated', syncServicesControl);
 
     return () => {
       window.removeEventListener('app:hotels-updated', syncHotels);
       window.removeEventListener('app:hotel-reviews-updated', syncHotels);
       window.removeEventListener('app:transports-updated', syncTransports);
       window.removeEventListener('app:restaurants-updated', syncRestaurants);
+      window.removeEventListener('app:services-control-updated', syncServicesControl);
     };
   }, []);
 
@@ -65,38 +69,45 @@ export const ServicesPage = ({
     return tokens.some((tok) => hay.includes(tok));
   };
 
-  const filteredHotels = hotels.filter((h) =>
-    matchesTokens(`${h.name || ''} ${h.location || ''} ${h.destinationId || ''} ${h.shortDescription || ''}`)
-  );
+  const filteredHotels = servicesControl?.hotels === false
+    ? []
+    : hotels.filter((h) =>
+        matchesTokens(`${h.name || ''} ${h.location || ''} ${h.destinationId || ''} ${h.shortDescription || ''}`)
+      );
 
-  const filteredTransports = transports.filter((t) => {
-    const routesStr = Array.isArray(t.routeFares)
-      ? t.routeFares.map((r) => `${r.from || ''} ${r.to || ''}`).join(' ')
-      : '';
-    return matchesTokens(`${t.name || ''} ${t.categoryName || ''} ${t.route || ''} ${t.description || ''} ${routesStr}`);
-  });
+  const filteredTransports = servicesControl?.transport === false
+    ? []
+    : transports.filter((t) => {
+        if (servicesControl?.[t.category] === false) return false;
+        const routesStr = Array.isArray(t.routeFares)
+          ? t.routeFares.map((r) => `${r.from || ''} ${r.to || ''}`).join(' ')
+          : '';
+        return matchesTokens(`${t.name || ''} ${t.categoryName || ''} ${t.route || ''} ${t.description || ''} ${routesStr}`);
+      });
 
-  const filteredRestaurants = restaurants.filter((r) =>
-    matchesTokens(`${r.name || ''} ${r.mealPlanType || ''} ${r.badge || ''} ${r.details || ''}`)
-  );
+  const filteredRestaurants = servicesControl?.restaurant === false
+    ? []
+    : restaurants.filter((r) =>
+        matchesTokens(`${r.name || ''} ${r.mealPlanType || ''} ${r.badge || ''} ${r.details || ''}`)
+      );
 
   const switcherTabs = [
     {
       id: 'hotels',
       label: 'Hotels & Resorts',
-      sublabel: `${hotels.length}+ Verified Stays`,
+      sublabel: servicesControl?.hotels === false ? 'Currently Off' : `${hotels.length}+ Verified Stays`,
       icon: Hotel
     },
     {
       id: 'transport',
       label: 'Transport & Vehicles',
-      sublabel: `${transports.length}+ Vehicles`,
+      sublabel: servicesControl?.transport === false ? 'Currently Off' : `${transports.length}+ Vehicles`,
       icon: Car
     },
     {
       id: 'restaurant',
       label: 'Restaurant & Dining',
-      sublabel: `${restaurants.length}+ Dining Plans`,
+      sublabel: servicesControl?.restaurant === false ? 'Currently Off' : `${restaurants.length}+ Dining Plans`,
       icon: UtensilsCrossed
     }
   ];
@@ -107,7 +118,7 @@ export const ServicesPage = ({
       title: 'Road Services',
       subtitleBn: 'সড়ক পথের সার্ভিস',
       description: 'চাঁদের গাড়ি, প্রাইভেট কার, সিএনজি, মাইক্রোবাস ও ৪x৪ এসইউভি।',
-      count: transports.filter((t) => t.category === 'road').length,
+      count: servicesControl?.transport === false || servicesControl?.road === false ? 'Off' : transports.filter((t) => t.category === 'road').length,
       icon: Car,
       image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80'
     },
@@ -116,7 +127,7 @@ export const ServicesPage = ({
       title: 'River Services',
       subtitleBn: 'নদী পথের সার্ভিস',
       description: 'লাক্সারি রিভার ক্রুজ, স্পিডবোট, ট্যুরিস্ট বোট ও প্রাইভেট ইয়ট।',
-      count: transports.filter((t) => t.category === 'waterway').length,
+      count: servicesControl?.transport === false || servicesControl?.waterway === false ? 'Off' : transports.filter((t) => t.category === 'waterway').length,
       icon: Ship,
       image: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=900&q=80'
     },
@@ -125,7 +136,7 @@ export const ServicesPage = ({
       title: 'Air Services',
       subtitleBn: 'আকাশ পথের সার্ভিস',
       description: 'প্রতিটি এয়ারপোর্টের ফ্লাইট সময়, গন্তব্য থেকে গন্তব্য রুট ও চার্টার।',
-      count: transports.filter((t) => t.category === 'air').length,
+      count: servicesControl?.transport === false || servicesControl?.air === false ? 'Off' : transports.filter((t) => t.category === 'air').length,
       icon: Plane,
       image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80'
     }
@@ -173,7 +184,13 @@ export const ServicesPage = ({
             <motion.button
               key={tab.id}
               type="button"
-              onClick={() => setActiveService(tab.id)}
+              onClick={() => {
+                if (servicesControl?.[tab.id] === false) {
+                  StorageService.notifyDisabledService(tab.id);
+                  return;
+                }
+                setActiveService(tab.id);
+              }}
               whileHover={{ y: -3, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 28 }}

@@ -621,6 +621,11 @@ export const rowToBooking = (r) => {
     vehicleType: extraMeta.vehicleType || '',
     rooms: extraMeta.rooms ?? null,
     seats: extraMeta.seats ?? null,
+    tripType: extraMeta.tripType || '',
+    routeFrom: extraMeta.routeFrom || '',
+    routeTo: extraMeta.routeTo || '',
+    selectedDates: Array.isArray(extraMeta.selectedDates) ? extraMeta.selectedDates : [],
+    selectedFoods: Array.isArray(extraMeta.selectedFoods) ? extraMeta.selectedFoods : [],
     arrivalTime: extraMeta.arrivalTime || '',
     confirmedByName: extraMeta.confirmedByName || '',
     confirmedByPhone: extraMeta.confirmedByPhone || '',
@@ -670,6 +675,11 @@ export const bookingToRow = (b) => {
     vatTaxPercentage: Number(b.vatTaxPercentage ?? 0) || 0,
     serviceType: b.serviceType || '',
     bookingType: b.bookingType || '',
+    tripType: b.tripType || '',
+    routeFrom: b.routeFrom || '',
+    routeTo: b.routeTo || '',
+    selectedDates: Array.isArray(b.selectedDates) ? b.selectedDates : [],
+    selectedFoods: Array.isArray(b.selectedFoods) ? b.selectedFoods : [],
     pickup: b.pickup || '',
     dropoff: b.dropoff || '',
     destination: b.destination || '',
@@ -1034,5 +1044,31 @@ export const rowToFooterSettings = (r) => ({
 export const footerSettingsToRow = (footerData) => ({
   id: 'primary',
   data: footerData || {},
+  updated_at: new Date().toISOString()
+});
+
+// 17. SEO Control CMS
+export const rowToSeoSettings = (r) => ({
+  ...(r?.data || {}),
+  id: r?.id || 'primary',
+  updatedAt: r?.updated_at || new Date().toISOString()
+});
+
+export const seoSettingsToRow = (seoData) => ({
+  id: 'primary',
+  data: seoData || {},
+  updated_at: new Date().toISOString()
+});
+
+// 18. Services Control CMS
+export const rowToServicesControl = (r) => ({
+  ...(r?.data || {}),
+  id: r?.id || 'primary',
+  updatedAt: r?.updated_at || new Date().toISOString()
+});
+
+export const servicesControlToRow = (servicesData) => ({
+  id: 'primary',
+  data: servicesData || {},
   updated_at: new Date().toISOString()
 });

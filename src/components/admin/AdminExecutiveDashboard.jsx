@@ -1525,6 +1525,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
                       <span className="text-[11px] text-slate-400 block">Rooms / Seats / Meal Plan</span>
                       <span className="font-bold">
                         {[
+                          viewOrderBooking.tripType || null,
                           viewOrderBooking.rooms ? `${viewOrderBooking.rooms} Room(s)` : null,
                           viewOrderBooking.seats ? `${viewOrderBooking.seats} Seat(s)` : null,
                           viewOrderBooking.mealPlan || null,
@@ -1534,6 +1535,12 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
                           .join(' • ') || 'Standard'}
                       </span>
                     </div>
+                    {viewOrderBooking.tripType && (
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Trip Type</span>
+                        <span className="font-bold text-[#69EBDA]">{viewOrderBooking.tripType}</span>
+                      </div>
+                    )}
                     {(viewOrderBooking.pickup || viewOrderBooking.dropoff || viewOrderBooking.destination) && (
                       <div className="sm:col-span-2">
                         <span className="text-[11px] text-slate-400 block">Route / Destination</span>

@@ -40,7 +40,8 @@ import {
   Layers,
   Building2,
   ShoppingBag,
-  FileText
+  FileText,
+  Search
 } from 'lucide-react';
 import { StorageService } from '../../services/storageService';
 import { AdminAuthService, ROOT_ADMIN_PROFILE_KEY } from '../../services/adminAuthService';
@@ -59,6 +60,7 @@ import { AdminExecutiveDashboard } from './AdminExecutiveDashboard';
 import { AdminContactControl } from './AdminContactControl';
 import { AdminAboutControl } from './AdminAboutControl';
 import { AdminFooterControl } from './AdminFooterControl';
+import { AdminSeoControl } from './AdminSeoControl';
 import { AdminControl } from './AdminControl';
 import { DynamicReactIcon, parseReactIconInput } from '../../utils/reactIconParser';
 
@@ -71,7 +73,20 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
   const isRoot = AdminAuthService.isRootAdmin() || currentAdmin?.role === 'root_admin' || currentAdmin?.isRoot === true;
 
   // Active navigation tab: 'dashboard' | 'customize-logo' | 'banner-control' | 'post-hotel-package' | 'post-transport' | 'post-restaurant' | 'settings'
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return sessionStorage.getItem('aetheria_admin_active_tab_v1') || 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('aetheria_admin_active_tab_v1', activeTab);
+    } catch {
+      // ignore
+    }
+  }, [activeTab]);
   
   // Web Control Accordion State (Drawer under Dashboard)
   const [isWebControlOpen, setIsWebControlOpen] = useState(false);
@@ -541,6 +556,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
     checkInTime: '',
     checkOutTime: '',
     transportRoutes: [{ from: '', to: '', seats: '', price: '' }],
+    breakfastMenu: [],
+    lunchMenu: [],
+    dinnerMenu: [],
     destinationId: '',
     bookingPrice: '',
     bookingDays: '',
@@ -572,6 +590,38 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
       ...prev,
       shortInfoItems: prev.shortInfoItems.map((item, i) => (i === idx ? { ...item, [field]: val } : item))
     }));
+  };
+
+  const [activeAdminMealTab, setActiveAdminMealTab] = useState('breakfastMenu');
+
+  const handleAddMealMenuItem = (mealKey) => {
+    setSingleHotelForm((prev) => ({
+      ...prev,
+      [mealKey]: [...(prev[mealKey] || []), { name: '', price: '', photo: '' }]
+    }));
+  };
+
+  const handleRemoveMealMenuItem = (mealKey, idx) => {
+    setSingleHotelForm((prev) => ({
+      ...prev,
+      [mealKey]: (prev[mealKey] || []).filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleChangeMealMenuItem = (mealKey, idx, field, val) => {
+    setSingleHotelForm((prev) => ({
+      ...prev,
+      [mealKey]: (prev[mealKey] || []).map((item, i) => (i === idx ? { ...item, [field]: val } : item))
+    }));
+  };
+
+  const handleUploadMealMenuPhoto = (mealKey, idx, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      handleChangeMealMenuItem(mealKey, idx, 'photo', String(reader.result || ''));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddTransportRoute = () => {
@@ -708,6 +758,15 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
         vatTaxPercentage: Number(singleHotelForm.vatTaxPercentage || 5)
       });
     } else if (svcType === 'restaurant') {
+      const cleanMealList = (list) =>
+        (Array.isArray(list) ? list : [])
+          .filter((m) => m && (String(m.name || '').trim() || String(m.price || '').trim() || String(m.photo || '').trim()))
+          .map((m) => ({
+            name: String(m.name || '').trim(),
+            price: Number(m.price || 0),
+            photo: String(m.photo || '').trim()
+          }));
+
       await StorageService.saveRestaurant({
         ...(editingSinglePostId ? { id: editingSinglePostId } : {}),
         name: singleHotelForm.name.trim(),
@@ -717,6 +776,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
         rateLabel: `৳ ${priceNum.toLocaleString()} / জন`,
         tags: cleanShortInfo.map((x) => x.text.trim()).filter(Boolean),
         shortInfoItems: cleanShortInfo,
+        breakfastMenu: cleanMealList(singleHotelForm.breakfastMenu),
+        lunchMenu: cleanMealList(singleHotelForm.lunchMenu),
+        dinnerMenu: cleanMealList(singleHotelForm.dinnerMenu),
         photo: singleHotelForm.defaultPhoto.trim(),
         defaultPhoto: singleHotelForm.defaultPhoto.trim(),
         galleryPhotos: singleHotelForm.galleryPhotos,
@@ -756,6 +818,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
       checkInTime: '',
       checkOutTime: '',
       transportRoutes: [{ from: '', to: '', seats: '', price: '' }],
+      breakfastMenu: [],
+      lunchMenu: [],
+      dinnerMenu: [],
       destinationId: '',
       bookingPrice: '',
       bookingDays: '',
@@ -778,7 +843,15 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
   };
 
   useEffect(() => {
-    if (activeTab === 'customize-logo' || activeTab === 'banner-control') {
+    if (
+      activeTab === 'services-control' ||
+      activeTab === 'customize-logo' ||
+      activeTab === 'banner-control' ||
+      activeTab === 'brand-logo-control' ||
+      activeTab === 'contact-control' ||
+      activeTab === 'about-control' ||
+      activeTab === 'footer-control'
+    ) {
       setIsWebControlOpen(true);
     }
     if (
@@ -801,6 +874,31 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
     window.addEventListener('app:branding-updated', handleBrandingUpdate);
     return () => window.removeEventListener('app:branding-updated', handleBrandingUpdate);
   }, []);
+
+  // Live Services Control State (Enable / Disable Core Services)
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  useEffect(() => {
+    const handleServicesControlUpdate = () => {
+      setServicesControl(StorageService.getServicesControl());
+    };
+    window.addEventListener('app:services-control-updated', handleServicesControlUpdate);
+    return () => window.removeEventListener('app:services-control-updated', handleServicesControlUpdate);
+  }, []);
+
+  const handleToggleServiceControl = async (serviceKey, serviceLabel) => {
+    const nextEnabled = servicesControl?.[serviceKey] === false;
+    const nextState = {
+      ...servicesControl,
+      [serviceKey]: nextEnabled
+    };
+    setServicesControl(nextState);
+    await StorageService.saveServicesControl(nextState);
+    setCmsToast({
+      show: true,
+      text: `${serviceLabel} ${nextEnabled ? 'Enable' : 'Disable'} করা হয়েছে!`
+    });
+    setTimeout(() => setCmsToast({ show: false, text: '' }), 3000);
+  };
   
   // Mobile sidebar open/close
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -1106,14 +1204,14 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                 onClick={() => setIsWebControlOpen(prev => !prev)}
                 className={`
                   w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
-                  ${isWebControlOpen || activeTab === 'customize-logo' || activeTab === 'banner-control' || activeTab === 'brand-logo-control' || activeTab === 'contact-control' || activeTab === 'about-control' || activeTab === 'footer-control'
+                  ${isWebControlOpen || activeTab === 'services-control' || activeTab === 'customize-logo' || activeTab === 'banner-control' || activeTab === 'brand-logo-control' || activeTab === 'contact-control' || activeTab === 'about-control' || activeTab === 'footer-control'
                     ? isLight ? 'bg-slate-100 text-slate-900 font-extrabold' : 'bg-slate-800/80 text-white font-extrabold'
                     : isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }
                 `}
               >
                 <div className="flex items-center gap-3">
-                  <Globe className={`w-4 h-4 ${isWebControlOpen || activeTab === 'customize-logo' || activeTab === 'banner-control' || activeTab === 'brand-logo-control' || activeTab === 'contact-control' || activeTab === 'about-control' || activeTab === 'footer-control' ? 'text-[#69EBDA]' : 'text-slate-400'}`} />
+                  <Globe className={`w-4 h-4 ${isWebControlOpen || activeTab === 'services-control' || activeTab === 'customize-logo' || activeTab === 'banner-control' || activeTab === 'brand-logo-control' || activeTab === 'contact-control' || activeTab === 'about-control' || activeTab === 'footer-control' ? 'text-[#69EBDA]' : 'text-slate-400'}`} />
                   <span>{language === 'en' ? 'Web Control' : 'ওয়েব কন্ট্রোল'}</span>
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isWebControlOpen ? 'rotate-180 text-[#69EBDA]' : 'text-slate-400'}`} />
@@ -1129,7 +1227,31 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#69EBDA]/40 ml-4 my-1"
                   >
-                    {/* 1. Customize Logo */}
+                    {/* 1. Services Control */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('services-control');
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                        ${activeTab === 'services-control'
+                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Layers className={`w-3.5 h-3.5 ${activeTab === 'services-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                        <span>{language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল'}</span>
+                      </div>
+                      {activeTab === 'services-control' && <ChevronRight className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {/* 2. Customize Logo */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1281,6 +1403,32 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                         <span>{language === 'en' ? 'Footer Control' : 'ফুটার কন্ট্রোল'}</span>
                       </div>
                       {activeTab === 'footer-control' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                      )}
+                    </button>
+
+                    {/* 7. SEO Control */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('seo-control');
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                        ${activeTab === 'seo-control'
+                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Search className={`w-3.5 h-3.5 ${activeTab === 'seo-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                        <span>{language === 'en' ? 'SEO Control' : 'SEO কন্ট্রোল'}</span>
+                      </div>
+                      {activeTab === 'seo-control' && (
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
                       )}
                     </button>
@@ -1438,7 +1586,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                 </span>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400 hidden sm:inline-block" />
                 <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                  {activeTab === 'customize-logo'
+                  {activeTab === 'services-control'
+                    ? (language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল')
+                    : activeTab === 'customize-logo'
                     ? (language === 'en' ? 'Customize Logo' : 'কাস্টমাইজ লোগো')
                     : activeTab === 'banner-control'
                       ? (language === 'en' ? 'Banner Control' : 'ব্যানার কন্ট্রোল')
@@ -1460,7 +1610,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                                     ? (language === 'en' ? 'About Control' : 'অ্যাবাউট কন্ট্রোল')
                                     : activeTab === 'footer-control'
                                       ? (language === 'en' ? 'Footer Control' : 'ফুটার কন্ট্রোল')
-                                      : activeTab === 'admin-control'
+                                      : activeTab === 'seo-control'
+                                        ? (language === 'en' ? 'SEO Control' : 'SEO কন্ট্রোল')
+                                        : activeTab === 'admin-control'
                                         ? (language === 'en' ? 'Admin Control' : 'অ্যাডমিন কন্ট্রোল')
                                         : activeTab === 'settings'
                                   ? (language === 'en' ? 'Settings' : 'সিস্টেম কনফিগারেশন')
@@ -1868,6 +2020,142 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                               </button>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    ) : singleHotelForm.serviceType === 'restaurant' ? (
+                      <div className={`p-4 rounded-2xl border space-y-3.5 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+                      }`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                            ৩ বেলার খাবারের মেনু (Breakfast / Lunch / Dinner)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAddMealMenuItem(activeAdminMealTab)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 text-xs font-black shadow-sm cursor-pointer hover:brightness-105"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>Add Food</span>
+                          </button>
+                        </div>
+
+                        {/* 3 Switching Buttons: Breakfast, Lunch, Dinner */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { key: 'breakfastMenu', label: 'Breakfast (সকাল)' },
+                            { key: 'lunchMenu', label: 'Lunch (দুপুর)' },
+                            { key: 'dinnerMenu', label: 'Dinner (রাত)' }
+                          ].map((tab) => {
+                            const active = activeAdminMealTab === tab.key;
+                            const count = (singleHotelForm[tab.key] || []).length;
+                            return (
+                              <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setActiveAdminMealTab(tab.key)}
+                                className={`py-2 px-2.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                  active
+                                    ? 'bg-slate-900 dark:bg-[#69EBDA] text-[#69EBDA] dark:text-slate-950 border-slate-900 dark:border-[#69EBDA]'
+                                    : isLight
+                                      ? 'bg-white text-slate-700 border-slate-200 hover:border-[#69EBDA]'
+                                      : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-[#69EBDA]'
+                                }`}
+                              >
+                                <span>{tab.label}</span>
+                                {count > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-teal-500/20">
+                                    {count}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Items for Active Meal Tab */}
+                        <div className="space-y-3">
+                          {(singleHotelForm[activeAdminMealTab] || []).length === 0 ? (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-3">
+                              উপরের <strong>+ Add Food</strong> বাটনে ক্লিক করে খাবার, ছবি ও দাম যোগ করুন।
+                            </p>
+                          ) : (
+                            (singleHotelForm[activeAdminMealTab] || []).map((mealItem, mIdx) => (
+                              <div
+                                key={mIdx}
+                                className={`p-3 rounded-xl border space-y-2.5 ${
+                                  isLight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-700/80'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] font-black text-teal-600 dark:text-[#69EBDA]">
+                                    আইটেম #{mIdx + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMealMenuItem(activeAdminMealTab, mIdx)}
+                                    className="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 border border-rose-500/30 flex items-center justify-center cursor-pointer"
+                                    title="মুছে ফেলুন"
+                                  >
+                                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  <input
+                                    type="text"
+                                    value={mealItem.name}
+                                    onChange={(e) => handleChangeMealMenuItem(activeAdminMealTab, mIdx, 'name', e.target.value)}
+                                    placeholder="খাবারের নাম (Food Name)"
+                                    className={`w-full px-3 py-2 rounded-xl text-xs font-semibold border outline-hidden ${
+                                      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-950/70 border-slate-700 text-white'
+                                    }`}
+                                  />
+                                  <input
+                                    type="number"
+                                    value={mealItem.price}
+                                    onChange={(e) => handleChangeMealMenuItem(activeAdminMealTab, mIdx, 'price', e.target.value)}
+                                    placeholder="দাম ৳ (Price)"
+                                    className={`w-full px-3 py-2 rounded-xl text-xs font-semibold border outline-hidden ${
+                                      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-950/70 border-slate-700 text-white'
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Photo Upload & Photo Link */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                  {mealItem.photo && (
+                                    <img
+                                      src={mealItem.photo}
+                                      alt={mealItem.name || 'food'}
+                                      className="w-10 h-10 rounded-lg object-cover shrink-0 border border-slate-300 dark:border-slate-700"
+                                    />
+                                  )}
+                                  <input
+                                    type="text"
+                                    value={mealItem.photo}
+                                    onChange={(e) => handleChangeMealMenuItem(activeAdminMealTab, mIdx, 'photo', e.target.value)}
+                                    placeholder="খাবারের ছবির লিংক (Photo URL)"
+                                    className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold border outline-hidden ${
+                                      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-slate-950/70 border-slate-700 text-white'
+                                    }`}
+                                  />
+                                  <label className="px-3 py-2 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-[#69EBDA] text-xs font-extrabold cursor-pointer text-center shrink-0">
+                                    Upload Photo
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) handleUploadMealMenuPhoto(activeAdminMealTab, mIdx, f);
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -2526,6 +2814,21 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                                     checkInTime: '',
                                     checkOutTime: '',
                                     transportRoutes: [{ from: '', to: '', seats: '', price: '' }],
+                                    breakfastMenu: Array.isArray(item.breakfastMenu)
+                                      ? item.breakfastMenu.map((m) =>
+                                          typeof m === 'object' ? { name: m.name || '', price: m.price ?? '', photo: m.photo || '' } : { name: String(m || ''), price: '', photo: '' }
+                                        )
+                                      : [],
+                                    lunchMenu: Array.isArray(item.lunchMenu)
+                                      ? item.lunchMenu.map((m) =>
+                                          typeof m === 'object' ? { name: m.name || '', price: m.price ?? '', photo: m.photo || '' } : { name: String(m || ''), price: '', photo: '' }
+                                        )
+                                      : [],
+                                    dinnerMenu: Array.isArray(item.dinnerMenu)
+                                      ? item.dinnerMenu.map((m) =>
+                                          typeof m === 'object' ? { name: m.name || '', price: m.price ?? '', photo: m.photo || '' } : { name: String(m || ''), price: '', photo: '' }
+                                        )
+                                      : [],
                                     destinationId: item.badge || '',
                                     bookingPrice: item.ratePerPerson != null ? String(item.ratePerPerson) : '',
                                     bookingDays: '1',
@@ -4190,6 +4493,233 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
           {/* ========================================================================= */}
           {activeTab === 'footer-control' && (
             <AdminFooterControl
+              language={language}
+              isLight={isLight}
+              onShowToast={(text) => {
+                setCmsToast({ show: true, text });
+                setTimeout(() => setCmsToast({ show: false, text: '' }), 4000);
+              }}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: SERVICES CONTROL (ENABLE / DISABLE CORE SERVICES REALTIME)           */}
+          {/* ========================================================================= */}
+          {activeTab === 'services-control' && (
+            <div className={`p-4 sm:p-6 lg:p-8 rounded-3xl border animate-in fade-in duration-300 ${
+              isLight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-6 border-b border-slate-200 dark:border-slate-800 gap-3">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2.5">
+                    <Layers className="w-6 h-6 text-teal-500" />
+                    <span>{language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল'}</span>
+                  </h2>
+                  <p className={`text-xs sm:text-sm mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'en'
+                      ? 'Enable or disable the 3 core website services in real time. Disabled services still appear on the homepage, and clicking them displays a notice modal.'
+                      : 'ওয়েবসাইটের ৩টি মূল সার্ভিস রিয়েল-টাইমে Enable বা Disable করুন। Disable থাকলে হোমপেজে কার্ড দেখাবে, তবে ক্লিক করলে সার্ভিসটি বন্ধ থাকার নোটিশ মডাল ওপেন হবে।'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {[
+                  {
+                    id: 'hotels',
+                    title: 'Hotels & Resorts',
+                    subtitle: language === 'en' ? 'Luxury stays & room booking' : 'হোটেল ও রিসোর্ট বুকিং সার্ভিস',
+                    icon: Hotel,
+                    accent: 'from-teal-500 to-emerald-500'
+                  },
+                  {
+                    id: 'transport',
+                    title: 'Transport & Vehicles',
+                    subtitle: language === 'en' ? 'Private cars & tourist vehicles' : 'ট্রান্সপোর্ট ও যানবাহন সার্ভিস',
+                    icon: Car,
+                    accent: 'from-cyan-500 to-blue-500'
+                  },
+                  {
+                    id: 'restaurant',
+                    title: 'Restaurant & Dining',
+                    subtitle: language === 'en' ? '3-time meal plans & dining' : 'রেস্টুরেন্ট ও ডাইনিং সার্ভিস',
+                    icon: UtensilsCrossed,
+                    accent: 'from-amber-500 to-orange-500'
+                  }
+                ].map((svc) => {
+                  const IconComp = svc.icon;
+                  const isEnabled = servicesControl?.[svc.id] !== false;
+                  return (
+                    <div
+                      key={svc.id}
+                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between gap-5 ${
+                        isLight
+                          ? 'bg-slate-50 border-slate-200 hover:border-teal-500/40'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-teal-500/40'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${svc.accent} flex items-center justify-center text-white shadow-lg shrink-0`}>
+                            <IconComp className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-black tracking-tight">{svc.title}</h3>
+                            <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {svc.subtitle}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 dark:border-slate-800">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold ${
+                            isEnabled
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {isEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleServiceControl(svc.id, svc.title)}
+                          aria-pressed={isEnabled}
+                          className={`relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                            isEnabled
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/25'
+                              : 'bg-rose-500 text-white hover:bg-rose-600 shadow-md shadow-rose-500/25'
+                          }`}
+                        >
+                          <span
+                            className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center ${
+                              isEnabled ? 'bg-white/30 justify-end' : 'bg-black/25 justify-start'
+                            }`}
+                          >
+                            <span className="w-3 h-3 rounded-full bg-white shadow" />
+                          </span>
+                          <span>{isEnabled ? 'Enable' : 'Disable'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Transport Sub-Services Control (Road, River, Airline) */}
+              <div className="mt-8 pt-7 border-t border-slate-200 dark:border-slate-800">
+                <div className="mb-5">
+                  <h3 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
+                    <Car className="w-5 h-5 text-cyan-500" />
+                    <span>{language === 'en' ? 'Transport Sub-Services Control' : 'ট্রান্সপোর্ট সাব-সার্ভিসেস কন্ট্রোল'}</span>
+                  </h3>
+                  <p className={`text-xs sm:text-sm mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {language === 'en'
+                      ? 'Individually enable or disable Road Service, River Service, and Airline Services.'
+                      : 'Road Service, River Service এবং Airline Services আলাদাভাবে Enable বা Disable করুন।'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {[
+                    {
+                      id: 'road',
+                      title: 'Road Service',
+                      subtitle: language === 'en' ? 'Cars, Jeeps & Microbuses' : 'সড়ক পথের যানবাহন সার্ভিস',
+                      icon: Car,
+                      accent: 'from-cyan-500 to-teal-500'
+                    },
+                    {
+                      id: 'waterway',
+                      title: 'River Service',
+                      subtitle: language === 'en' ? 'Cruises, Boats & Speedboats' : 'নদী পথের নৌযান সার্ভিস',
+                      icon: Ship,
+                      accent: 'from-blue-500 to-indigo-500'
+                    },
+                    {
+                      id: 'air',
+                      title: 'Airline Services',
+                      subtitle: language === 'en' ? 'Flights, Helicopters & Jets' : 'আকাশ পথের এয়ারলাইন সার্ভিস',
+                      icon: Plane,
+                      accent: 'from-violet-500 to-purple-500'
+                    }
+                  ].map((subSvc) => {
+                    const SubIcon = subSvc.icon;
+                    const isSubEnabled = servicesControl?.[subSvc.id] !== false;
+                    const itemCount = transportsList.filter((t) => t.category === subSvc.id).length;
+                    return (
+                      <div
+                        key={subSvc.id}
+                        className={`p-5 rounded-2xl border transition-all flex flex-col justify-between gap-5 ${
+                          isLight
+                            ? 'bg-slate-50 border-slate-200 hover:border-cyan-500/40'
+                            : 'bg-slate-950/60 border-slate-800 hover:border-cyan-500/40'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${subSvc.accent} flex items-center justify-center text-white shadow-lg shrink-0`}>
+                              <SubIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <h4 className="text-base font-black tracking-tight">
+                                {subSvc.title} ({itemCount})
+                              </h4>
+                              <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                                {subSvc.subtitle}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 dark:border-slate-800">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold ${
+                              isSubEnabled
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isSubEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            {isSubEnabled ? 'Enabled' : 'Disabled'}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleServiceControl(subSvc.id, subSvc.title)}
+                            aria-pressed={isSubEnabled}
+                            className={`relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                              isSubEnabled
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/25'
+                                : 'bg-rose-500 text-white hover:bg-rose-600 shadow-md shadow-rose-500/25'
+                            }`}
+                          >
+                            <span
+                              className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center ${
+                                isSubEnabled ? 'bg-white/30 justify-end' : 'bg-black/25 justify-start'
+                              }`}
+                            >
+                              <span className="w-3 h-3 rounded-full bg-white shadow" />
+                            </span>
+                            <span>{isSubEnabled ? 'Enable' : 'Disable'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: SEO CONTROL (REALTIME SEO & META TAGS CMS)                           */}
+          {/* ========================================================================= */}
+          {activeTab === 'seo-control' && (
+            <AdminSeoControl
               language={language}
               isLight={isLight}
               onShowToast={(text) => {

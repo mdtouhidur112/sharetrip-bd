@@ -111,7 +111,7 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
                 whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.8 }}
                 className={`
-                  group relative h-[480px] sm:h-[520px] rounded-3xl overflow-hidden cursor-pointer
+                  group relative h-[280px] sm:h-[320px] lg:h-[340px] rounded-3xl overflow-hidden cursor-pointer
                   border transition-all duration-500
                   ${isSelected
                     ? 'border-[#69EBDA] shadow-[0_0_35px_rgba(105,235,218,0.4)] ring-2 ring-[#69EBDA]/50'

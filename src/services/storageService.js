@@ -48,6 +48,10 @@ import {
   aboutPageToRow,
   rowToFooterSettings,
   footerSettingsToRow,
+  rowToSeoSettings,
+  seoSettingsToRow,
+  rowToServicesControl,
+  servicesControlToRow,
   removeStorageFiles,
   handlePermanentDelete
 } from './supabaseClient';
@@ -71,6 +75,36 @@ const EXPENSES_STORAGE_KEY = 'aetheria_expenses_db';
 const ABOUT_PAGE_STORAGE_KEY = 'aetheria_about_page_db';
 const SOCIAL_LINKS_STORAGE_KEY = 'aetheria_social_links_db';
 const FOOTER_SETTINGS_STORAGE_KEY = 'aetheria_footer_settings_db';
+const SEO_SETTINGS_STORAGE_KEY = 'aetheria_seo_settings_db';
+const SERVICES_CONTROL_STORAGE_KEY = 'aetheria_services_control_db';
+
+export const DEFAULT_SERVICES_CONTROL = {
+  id: 'primary',
+  hotels: true,
+  transport: true,
+  restaurant: true,
+  road: true,
+  waterway: true,
+  air: true,
+};
+
+export const DEFAULT_SEO_SETTINGS = {
+  id: 'primary',
+  siteTitle: 'ShareTrip BD — Curated Travel, Hotels & Tour Packages',
+  metaDescription: 'Book curated tour packages, luxury hotels, transport & dining experiences across Bangladesh and worldwide.',
+  metaKeywords: 'travel agency bangladesh, tour packages, hotel booking, transport, sharetrip bd',
+  canonicalUrl: '',
+  ogTitle: '',
+  ogDescription: '',
+  ogImage: '',
+  twitterCard: 'summary_large_image',
+  twitterSite: '',
+  robots: 'index, follow',
+  googleVerification: '',
+  schemaOrgName: '',
+  schemaPhone: '',
+  schemaAddress: ''
+};
 
 export const DEFAULT_FOOTER_SETTINGS = {
   id: 'primary',
@@ -112,147 +146,9 @@ export const DEFAULT_FOOTER_SETTINGS = {
   paymentLogos: []
 };
 
-export const DEFAULT_RESTAURANTS = [
-  {
-    id: 'rest-royal-seafood',
-    name: 'রয়্যাল সি-ফুড অ্যান্ড লাইভ বারবিকিউ প্যাভিলিয়ন',
-    mealPlanType: 'AP (৩ বেলা সম্পূর্ণ খাবার)',
-    badge: 'Live BBQ & Buffet',
-    ratePerPerson: 1850,
-    rateLabel: '৳ ১,৮৫০ / জন (প্রতিদিন)',
-    tags: ['১০০% হালাল', 'সি-ফুড স্পেশাল', 'লাইভ গ্রিল'],
-    breakfastMenu: ['বুফে ব্রেকফাস্ট', 'তাজা ফলের রস ও আর্টিজান কফি', 'ওমলেট ও প্যানকেক স্টেশন'],
-    lunchMenu: ['জামদানী পোলাও / ভুনা খিচুড়ি', 'গ্রিলড চিকেন ও সামুদ্রিক মাছ', 'অর্গানিক সালাদ ও ডেজার্ট'],
-    dinnerMenu: ['লাইভ বারবিকিউ প্রন ও রেড স্ন্যাপার', 'বাটার নান ও তন্দুরি প্লাটার', 'চকলেট লাভা কেক'],
-    photo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80'
-  },
-  {
-    id: 'rest-bengali-heritage-thali',
-    name: 'ঐতিহ্যবাহী বাংলা হেরিটেজ থালি হাউজ',
-    mealPlanType: 'MAP (ব্রেকফাস্ট + ডিনার / লাঞ্চ)',
-    badge: 'Traditional Thali',
-    ratePerPerson: 1250,
-    rateLabel: '৳ ১,২৫০ / জন (প্রতিদিন)',
-    tags: ['১০০% হালাল', 'ভেজ অপশন আছে', 'দেশি স্বাদ'],
-    breakfastMenu: ['ভুনা খিচুড়ি ও ডিম/মাংস ভুনা', 'পরোটা ও সবজি ভাজি', 'মসলা চা ও মিষ্টি'],
-    lunchMenu: ['সাদা ভাত ও চিংড়ি মালাইকারি', 'সরিষা ইলিশ / কাচ্চি বিরিয়ানি', 'আম ডাল, ভর্তা ও দই'],
-    dinnerMenu: ['চিকেন রোস্ট ও শাহী পোলাও', 'গার্লিক নান ও বিফ রেজালা', 'ফিরনি ও পান সুপারি'],
-    photo: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80'
-  },
-  {
-    id: 'rest-continental-sky-lounge',
-    name: 'স্কাইলাইন কন্টিনেন্টাল ও অর্গানিক বুফে',
-    mealPlanType: 'CP (বুফে ব্রেকফাস্ট ও স্ন্যাকস)',
-    badge: 'Buffet Lounge',
-    ratePerPerson: 950,
-    rateLabel: '৳ ৯৫০ / জন (প্রতিদিন)',
-    tags: ['হালাল সার্টিফাইড', 'ভেজ ও ভেগান', 'রুফটপ ভিউ'],
-    breakfastMenu: ['কন্টিনেন্টাল ক্রোয়াসাঁ ও ওয়াফল', 'ফ্রেশ স্মুদি বোল ও ফ্রুটস', 'ক্যাপুচিনো ও গ্রিন টি'],
-    lunchMenu: ['গ্রিলড স্যামন ও চিকেন সিজার সালাদ', 'পাস্তা আলফ্রেডো ও মাশরুম স্যুপ'],
-    dinnerMenu: ['বিফ স্টেক ও রোস্টেড ভেজিটেবলস', 'স্যাফরন রাইস ও হট চকলেট'],
-    photo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80'
-  }
-];
+export const DEFAULT_RESTAURANTS = [];
 
-export const INITIAL_HOTELS = [
-  {
-    id: 'hotel-royal-tulip-coxsbazar',
-    name: 'সি পার্ল বিচ রিসোর্ট অ্যান্ড স্পা (Sea Pearl Beach Resort & Spa)',
-    shortDescription: 'ইনানী সমুদ্র সৈকতের কোল ঘেঁষে অবস্থিত আন্তর্জাতিক মানের ৫-তারকা লাক্সারি ওশান-ভিউ রিসোর্ট ও প্রাইভেট বিচ ভিলা।',
-    checkInTime: '14:00',
-    checkOutTime: '12:00',
-    destinationId: 'beach',
-    location: 'ইনানী সৈকত, কক্সবাজার',
-    bookingPrice: 8500,
-    pricePerNight: 8500,
-    bookingDays: '1 Day',
-    vatTaxPercentage: 5,
-    shortInfoItems: [
-      { icon: 'import { MdWifi } from "react-icons/md";', text: 'হাই-স্পিড ফ্রি ওয়াইফাই' },
-      { icon: 'import { MdPool } from "react-icons/md";', text: 'ওশান-ভিউ ইনফিনিটি সুইমিং পুল' },
-      { icon: 'import { MdRestaurant } from "react-icons/md";', text: 'কমপ্লিমেন্টারি বুফে ব্রেকফাস্ট' },
-      { icon: 'import { MdAcUnit } from "react-icons/md";', text: 'সেন্ট্রাল এয়ার কন্ডিশনিং (AC)' },
-      { icon: 'import { MdLocalParking } from "react-icons/md";', text: 'ফ্রি ভিআইপি কার পার্কিং' },
-      { icon: 'import { MdSpa } from "react-icons/md";', text: 'লাক্সারি স্পা ও জিমনেসিয়াম' },
-      { icon: 'import { MdSecurity } from "react-icons/md";', text: '২৪/৭ সিসিটিভি ও রিসোর্ট সিকিউরিটি' }
-    ],
-    details:
-      'ইনানী সৈকতের নির্জন ও মনোমুগ্ধকর পরিবেশে অবস্থিত সি পার্ল বিচ রিসোর্ট অ্যান্ড স্পা আপনাকে দেবে আন্তর্জাতিক মানের ৫-তারকা আতিথেয়তা। প্রতিটি সুপরিসর রুমের প্রাইভেট ব্যালকনি থেকে সরাসরি দেখা যায় বঙ্গোপসাগরের নীল জলরাশি এবং পাহাড়ের সবুজ মায়া।\n\nরিসোর্টে রয়েছে নিজস্ব প্রাইভেট বিচ অ্যাক্সেস, ওয়াটার পার্ক, ইনডোর ও আউটডোর সুইমিং পুল, আন্তর্জাতিক মানের ৫টি মাল্টি-কুইজিন রেস্তোরাঁ এবং বিশ্বমানের স্পা সার্ভিস। পরিবার, কাপল কিংবা কর্পোরেট অবকাশ যাপনের জন্য এটি বাংলাদেশের অন্যতম সেরা লাক্সারি রিসোর্ট। প্রতিটি রুমে রয়েছে আধুনিক সেন্ট্রাল এসি, এলইডি টিভি, মিনিবার এবং ২৪ ঘণ্টা রুম সার্ভিসের সার্বক্ষণিক সুবিধা।',
-    defaultPhoto: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
-    galleryPhotos: [
-      'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80'
-    ],
-    youtubeLink: 'https://www.youtube.com/watch?v=DFSdQ3n_V9c',
-    locationLink: 'https://maps.google.com/?q=Inani+Beach+Coxs+Bazar'
-  },
-  {
-    id: 'hotel-meghmachang-sajek',
-    name: 'মেঘমাচাং ইকো-লাক্সারি রিসোর্ট ও ক্লাউড ভিলা (Meghmachang Cloud Villa)',
-    shortDescription: 'সাজেক ভ্যালির সর্বোচ্চ চূড়ায় মেঘের সমুদ্র ছুঁয়ে থাকা প্রিমিয়াম কাঠের কটেজ ও প্যানোরামিক ভিউ রিসোর্ট।',
-    checkInTime: '12:00',
-    checkOutTime: '11:00',
-    destinationId: 'nature',
-    location: 'রুইলুই পাড়া, সাজেক ভ্যালি',
-    bookingPrice: 6500,
-    pricePerNight: 6500,
-    bookingDays: '1 Day',
-    vatTaxPercentage: 5,
-    shortInfoItems: [
-      { icon: 'import { MdKingBed } from "react-icons/md";', text: 'কিং সাইজ প্রিমিয়াম উডেন স্যুট' },
-      { icon: 'import { MdLandscape } from "react-icons/md";', text: '৩৬০° মেঘ ও লুসাই পাহাড় ভিউ ব্যালকনি' },
-      { icon: 'import { MdFreeBreakfast } from "react-icons/md";', text: 'সকালের নাস্তা ও ওয়েলকাম ড্রিংকস' },
-      { icon: 'import { MdWifi } from "react-icons/md";', text: 'ফ্রি হাই-স্পিড ওয়াইফাই জোন' },
-      { icon: 'import { MdLocalDining } from "react-icons/md";', text: 'ঐতিহ্যবাহী ব্যাম্বু চিকেন ও বারবিকিউ জোন' },
-      { icon: 'import { MdSecurity } from "react-icons/md";', text: '২৪ ঘণ্টা জেনারেটর ও নিরাপত্তা সুবিধা' }
-    ],
-    details:
-      'সমুদ্রপৃষ্ঠ থেকে ১৮০০ ফুট উঁচুতে সাজেক ভ্যালির রুইলুই পাড়ায় অবস্থিত মেঘমাচাং ইকো-লাক্সারি রিসোর্ট। রিসোর্টের প্রশস্ত কাঠের বারান্দায় বসে হাত বাড়ালেই ছোঁয়া যায় শুভ্র মেঘের ভেলা এবং দেখা যায় মিজোরামের নীল পাহাড়ের সারি।\n\nপ্রতিটি কটেজে রয়েছে আধুনিক অ্যাটাচড বাথরুম, গিজার, আরামদায়ক কিং সাইজ বেড এবং ব্যক্তিগত ক্লাউড-ভিউ ডেক। সন্ধ্যার পর রিসোর্টের নিজস্ব লনে ক্যাম্পফায়ার ও বারবিকিউ ডিনারের ব্যবস্থা আপনার ভ্রমণকে করে তুলবে অবিস্মরণীয়। প্রকৃতির নিবিড় সান্নিধ্যে এক অনন্য প্রশান্তির ঠিকানা।',
-    defaultPhoto: 'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1200&q=80',
-    image: 'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1200&q=80',
-    galleryPhotos: [
-      'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-    ],
-    youtubeLink: 'https://www.youtube.com/watch?v=2b9txcAt4e0',
-    locationLink: 'https://maps.google.com/?q=Sajek+Valley+Bangladesh'
-  },
-  {
-    id: 'hotel-the-palace-resort',
-    name: 'দ্য প্যালেস লাক্সারি রিসোর্ট অ্যান্ড স্পা (The Palace Luxury Resort)',
-    shortDescription: 'সিলেটের সবুজ চা বাগানের মাঝে রোমাঞ্চকর এডভেঞ্চার ট্র্যাক, হেলিপ্যাড ও ৫-তারকা ভিলা সমাহার।',
-    checkInTime: '13:00',
-    checkOutTime: '11:30',
-    destinationId: 'adventure',
-    location: 'বাহুবল, সিলেট',
-    bookingPrice: 9500,
-    pricePerNight: 9500,
-    bookingDays: '1 Day',
-    vatTaxPercentage: 5,
-    shortInfoItems: [
-      { icon: 'import { MdDirectionsBike } from "react-icons/md";', text: 'রোমাঞ্চকর এটিভি ও সাইক্লিং ট্রেইল' },
-      { icon: 'import { MdPool } from "react-icons/md";', text: 'হিল-টপ ইনফিনিটি সুইমিং পুল' },
-      { icon: 'import { MdFlight } from "react-icons/md";', text: 'প্রাইভেট হেলিপ্যাড ও ট্রান্সফার' },
-      { icon: 'import { MdRestaurant } from "react-icons/md";', text: 'ফাইন ডাইনিং মাল্টি-কুইজিন রেস্তোরাঁ' },
-      { icon: 'import { MdMovie } from "react-icons/md";', text: 'নিজস্ব ৩ডি সিনেপ্লেক্স ও গেম জোন' },
-      { icon: 'import { MdSecurity } from "react-icons/md";', text: '২৪ ঘণ্টা নিশ্ছিদ্র নিরাপত্তা' }
-    ],
-    details:
-      'সিলেটের বাহুবলের বিস্তীর্ণ পাহাড়ি চা বাগানের কোল ঘেঁষে গড়ে উঠেছে দ্য প্যালেস লাক্সারি রিসোর্ট। এটি বাংলাদেশের সবচেয়ে বড় ও আধুনিক প্রাইভেট রিসোর্ট স্টেট। রিসোর্টের ভেতরে রয়েছে নিজস্ব হেলিপ্যাড, একাধিক সুইমিং পুল, থিয়েটার এবং রোমাঞ্চকর সাইক্লিং ও হাইকিং ট্র্যাক। প্রকৃতির নিরিবিলি পরিবেশে পরিবারের সবাইকে নিয়ে প্রিমিয়াম ছুটির আনন্দ উপভোগ করতে দ্য প্যালেস এক অনন্য গন্তব্য।',
-    defaultPhoto: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
-    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
-    galleryPhotos: [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80'
-    ],
-    youtubeLink: 'https://www.youtube.com/watch?v=DFSdQ3n_V9c',
-    locationLink: 'https://maps.google.com/?q=The+Palace+Luxury+Resort+Bahubal'
-  }
-];
+export const INITIAL_HOTELS = [];
 
 // Initial registered users list (Zero mock users: Real registered travelers & admins only)
 const INITIAL_USERS = [];
@@ -419,6 +315,30 @@ export const StorageService = {
         window.dispatchEvent(new CustomEvent('app:footer-settings-updated'));
       }
 
+      // 11h. SEO Settings CMS (Sync from Supabase)
+      const { data: dbSeo, error: seoError } = await supabase
+        .from('seo_settings')
+        .select('*')
+        .eq('id', 'primary')
+        .maybeSingle();
+      if (!seoError && dbSeo) {
+        const mergedSeo = { ...DEFAULT_SEO_SETTINGS, ...rowToSeoSettings(dbSeo) };
+        localStorage.setItem(SEO_SETTINGS_STORAGE_KEY, JSON.stringify(mergedSeo));
+        window.dispatchEvent(new CustomEvent('app:seo-settings-updated'));
+      }
+
+      // 11i. Services Control CMS (Sync from Supabase)
+      const { data: dbServicesControl, error: servicesControlError } = await supabase
+        .from('services_control')
+        .select('*')
+        .eq('id', 'primary')
+        .maybeSingle();
+      if (!servicesControlError && dbServicesControl) {
+        const mergedServicesControl = { ...DEFAULT_SERVICES_CONTROL, ...rowToServicesControl(dbServicesControl) };
+        localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(mergedServicesControl));
+        window.dispatchEvent(new CustomEvent('app:services-control-updated'));
+      }
+
       // 12. Start Persistent Real-Time WebSocket Listeners across all tables
       StorageService.startRealtimeListeners();
     } catch (e) {
@@ -572,6 +492,30 @@ export const StorageService = {
             const mergedFooter = { ...DEFAULT_FOOTER_SETTINGS, ...rowToFooterSettings(data) };
             localStorage.setItem(FOOTER_SETTINGS_STORAGE_KEY, JSON.stringify(mergedFooter));
             window.dispatchEvent(new CustomEvent('app:footer-settings-updated'));
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'seo_settings' }, async () => {
+          const { data, error } = await supabase
+            .from('seo_settings')
+            .select('*')
+            .eq('id', 'primary')
+            .maybeSingle();
+          if (!error && data) {
+            const mergedSeo = { ...DEFAULT_SEO_SETTINGS, ...rowToSeoSettings(data) };
+            localStorage.setItem(SEO_SETTINGS_STORAGE_KEY, JSON.stringify(mergedSeo));
+            window.dispatchEvent(new CustomEvent('app:seo-settings-updated'));
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'services_control' }, async () => {
+          const { data, error } = await supabase
+            .from('services_control')
+            .select('*')
+            .eq('id', 'primary')
+            .maybeSingle();
+          if (!error && data) {
+            const mergedServicesControl = { ...DEFAULT_SERVICES_CONTROL, ...rowToServicesControl(data) };
+            localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(mergedServicesControl));
+            window.dispatchEvent(new CustomEvent('app:services-control-updated'));
           }
         })
         .subscribe();
@@ -925,19 +869,9 @@ export const StorageService = {
   },
 
   resetPackagesToDefault: async () => {
-    const demoPkg = POPULAR_PACKAGES[0];
-    if (!demoPkg) return [];
-    localStorage.setItem('aetheria_demo_pkg_seeded_v2', 'true');
-    localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify([demoPkg]));
+    localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify([]));
     window.dispatchEvent(new CustomEvent('app:packages-updated'));
-    if (supabase) {
-      try {
-        await supabase.from('packages').upsert(packageToRow(demoPkg));
-      } catch (err) {
-        console.warn('Reset demo package sync warning:', err);
-      }
-    }
-    return [demoPkg];
+    return [];
   },
 
   savePackage: async (pkgData) => {
@@ -1527,6 +1461,40 @@ export const StorageService = {
   },
 
   // -------------------------------------------------------------
+  // SERVICES CONTROL CMS
+  // -------------------------------------------------------------
+  getServicesControl: () => {
+    try {
+      const stored = localStorage.getItem(SERVICES_CONTROL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SERVICES_CONTROL, ...parsed };
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored services control', err);
+    }
+    return DEFAULT_SERVICES_CONTROL;
+  },
+
+  saveServicesControl: async (servicesData) => {
+    const nextData = { ...DEFAULT_SERVICES_CONTROL, ...(servicesData || {}), id: 'primary' };
+    localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:services-control-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('services_control').upsert(servicesControlToRow(nextData));
+        if (error) console.error('Supabase services_control upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase services_control save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
+  // -------------------------------------------------------------
   // FOOTER SETTINGS & UNLIMITED SOCIAL / PAYMENT LOGOS CRUD
   // -------------------------------------------------------------
   getFooterSettings: () => {
@@ -1558,6 +1526,135 @@ export const StorageService = {
       }
     }
     return nextData;
+  },
+
+  // -------------------------------------------------------------
+  // SERVICES CONTROL CMS
+  // -------------------------------------------------------------
+  getServicesControl: () => {
+    try {
+      const stored = localStorage.getItem(SERVICES_CONTROL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SERVICES_CONTROL, ...parsed };
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored services control', err);
+    }
+    return DEFAULT_SERVICES_CONTROL;
+  },
+
+  saveServicesControl: async (servicesData) => {
+    const nextData = { ...DEFAULT_SERVICES_CONTROL, ...(servicesData || {}), id: 'primary' };
+    localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:services-control-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('services_control').upsert(servicesControlToRow(nextData));
+        if (error) console.error('Supabase services_control upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase services_control save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
+  // -------------------------------------------------------------
+  // SEO CONTROL SETTINGS CRUD
+  // -------------------------------------------------------------
+  getSeoSettings: () => {
+    try {
+      const stored = localStorage.getItem(SEO_SETTINGS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SEO_SETTINGS, ...parsed };
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored seo settings', err);
+    }
+    return DEFAULT_SEO_SETTINGS;
+  },
+
+  saveSeoSettings: async (seoData) => {
+    const nextData = { ...DEFAULT_SEO_SETTINGS, ...(seoData || {}), id: 'primary' };
+    localStorage.setItem(SEO_SETTINGS_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:seo-settings-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('seo_settings').upsert(seoSettingsToRow(nextData));
+        if (error) console.error('Supabase seo_settings upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase seo_settings save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
+  // -------------------------------------------------------------
+  // SERVICES CONTROL CMS
+  // -------------------------------------------------------------
+  getServicesControl: () => {
+    try {
+      const stored = localStorage.getItem(SERVICES_CONTROL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SERVICES_CONTROL, ...parsed };
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored services control', err);
+    }
+    return DEFAULT_SERVICES_CONTROL;
+  },
+
+  saveServicesControl: async (servicesData) => {
+    const nextData = { ...DEFAULT_SERVICES_CONTROL, ...(servicesData || {}), id: 'primary' };
+    localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:services-control-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('services_control').upsert(servicesControlToRow(nextData));
+        if (error) console.error('Supabase services_control upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase services_control save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
+  isServiceEnabled: (serviceKey) => {
+    const validKeys = ['hotels', 'transport', 'restaurant', 'road', 'waterway', 'air'];
+    const key = validKeys.includes(serviceKey) ? serviceKey : 'hotels';
+    const control = StorageService.getServicesControl();
+    if (key === 'road' || key === 'waterway' || key === 'air') {
+      return control?.transport !== false && control?.[key] !== false;
+    }
+    return control?.[key] !== false;
+  },
+
+  notifyDisabledService: (serviceKey) => {
+    const titles = {
+      hotels: 'Hotels & Resorts',
+      transport: 'Transport & Vehicles',
+      restaurant: 'Restaurant & Dining',
+      road: 'Road Services',
+      waterway: 'River Services',
+      air: 'Airline Services'
+    };
+    const key = titles[serviceKey] ? serviceKey : 'hotels';
+    window.dispatchEvent(
+      new CustomEvent('app:service-disabled-clicked', {
+        detail: { serviceKey: key, title: titles[key] || 'This Service' }
+      })
+    );
   },
 
   // -------------------------------------------------------------

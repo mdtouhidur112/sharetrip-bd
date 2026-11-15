@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Hotel,
   Car,
   UtensilsCrossed,
   ArrowUpRight,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 
@@ -16,6 +18,8 @@ export const CoreServicesSection = ({ onSelectService }) => {
     transport: StorageService.getTransports().length,
     restaurant: StorageService.getRestaurants().length
   }));
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [disabledServiceModal, setDisabledServiceModal] = useState(null);
 
   useEffect(() => {
     const syncCounts = () => {
@@ -25,15 +29,20 @@ export const CoreServicesSection = ({ onSelectService }) => {
         restaurant: StorageService.getRestaurants().length
       });
     };
+    const syncServicesControl = () => {
+      setServicesControl(StorageService.getServicesControl());
+    };
 
     window.addEventListener('app:hotels-updated', syncCounts);
     window.addEventListener('app:transports-updated', syncCounts);
     window.addEventListener('app:restaurants-updated', syncCounts);
+    window.addEventListener('app:services-control-updated', syncServicesControl);
 
     return () => {
       window.removeEventListener('app:hotels-updated', syncCounts);
       window.removeEventListener('app:transports-updated', syncCounts);
       window.removeEventListener('app:restaurants-updated', syncCounts);
+      window.removeEventListener('app:services-control-updated', syncServicesControl);
     };
   }, []);
 
@@ -43,7 +52,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Hotels & Resorts',
       subtitleBn: 'বিলাসবহুল হোটেল ও রিসোর্ট',
       summary: 'Luxury stays, curated rooms, floor & bath specs with real-time calendar availability.',
-      countBadge: `${counts.hotels}+ Verified Stays`,
+      countBadge: servicesControl?.hotels === false ? 'Currently Off' : `${counts.hotels}+ Verified Stays`,
       image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
       icon: Hotel
     },
@@ -52,7 +61,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Transport & Vehicles',
       subtitleBn: 'প্রাইভেট কার ও ট্যুরিস্ট যানবাহন',
       summary: 'Private cars, executive microbuses, 4x4 tourist jeeps, and full scenic route coverage.',
-      countBadge: `${counts.transport}+ Vehicles`,
+      countBadge: servicesControl?.transport === false ? 'Currently Off' : `${counts.transport}+ Vehicles`,
       image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
       icon: Car
     },
@@ -61,7 +70,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Restaurant & Dining',
       subtitleBn: 'রেস্টুরেন্ট ও ৩-বেলা মিল প্ল্যান',
       summary: '3-time daily meal plans, signature buffets, traditional heritage thali, and live BBQ.',
-      countBadge: `${counts.restaurant}+ Dining Plans`,
+      countBadge: servicesControl?.restaurant === false ? 'Currently Off' : `${counts.restaurant}+ Dining Plans`,
       image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       icon: UtensilsCrossed
     }
@@ -95,7 +104,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
       </div>
 
       {/* 3-Service Premium Liquid Glass Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+      <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start relative z-10">
         {serviceCards.map((card, idx) => {
           const IconComponent = card.icon;
           return (
@@ -107,7 +116,13 @@ export const CoreServicesSection = ({ onSelectService }) => {
               whileHover={{ y: -6, scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26, delay: idx * 0.05 }}
-              onClick={() => onSelectService && onSelectService(card.id)}
+              onClick={() => {
+                if (servicesControl?.[card.id] === false) {
+                  setDisabledServiceModal({ title: card.title });
+                  return;
+                }
+                onSelectService && onSelectService(card.id);
+              }}
               className="group relative rounded-[2rem] overflow-hidden cursor-pointer bg-[#5C6977]/90 dark:bg-slate-900/65 backdrop-blur-2xl border border-white/25 dark:border-white/15 hover:border-[#69EBDA]/70 shadow-[0_14px_38px_rgba(15,23,42,0.22),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:shadow-[0_24px_55px_rgba(105,235,218,0.28)] transition-colors duration-300 flex flex-col justify-between min-h-[390px]"
             >
               {/* Cover Image with Dark Gradient Overlay */}
@@ -161,6 +176,56 @@ export const CoreServicesSection = ({ onSelectService }) => {
           );
         })}
       </div>
+
+      {/* Disabled Service Notice Modal (English) */}
+      <AnimatePresence>
+        {disabledServiceModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setDisabledServiceModal(null)}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 shadow-2xl p-6 sm:p-7 text-center"
+            >
+              <button
+                type="button"
+                onClick={() => setDisabledServiceModal(null)}
+                aria-label="Close modal"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                Service Currently Off
+              </h3>
+              <p className="mt-2.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Sorry, <span className="font-bold text-slate-900 dark:text-white">{disabledServiceModal.title}</span> is currently turned off. Please check back later or explore our other available services.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setDisabledServiceModal(null)}
+                className="mt-6 w-full py-3 rounded-2xl bg-gradient-to-r from-[#69EBDA] to-teal-500 text-slate-950 font-black text-sm hover:opacity-95 transition-opacity cursor-pointer shadow-lg shadow-teal-500/20"
+              >
+                Okay, Got It
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

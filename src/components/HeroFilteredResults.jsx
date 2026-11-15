@@ -18,19 +18,23 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
   const [hotels, setHotels] = useState(() => StorageService.getHotels() || []);
   const [transports, setTransports] = useState(() => StorageService.getTransports() || []);
   const [restaurants, setRestaurants] = useState(() => StorageService.getRestaurants() || []);
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
 
   useEffect(() => {
     const syncHotels = () => setHotels(StorageService.getHotels() || []);
     const syncTransports = () => setTransports(StorageService.getTransports() || []);
     const syncRestaurants = () => setRestaurants(StorageService.getRestaurants() || []);
+    const syncServicesControl = () => setServicesControl(StorageService.getServicesControl());
 
     window.addEventListener('app:hotels-updated', syncHotels);
     window.addEventListener('app:transports-updated', syncTransports);
     window.addEventListener('app:restaurants-updated', syncRestaurants);
+    window.addEventListener('app:services-control-updated', syncServicesControl);
     return () => {
       window.removeEventListener('app:hotels-updated', syncHotels);
       window.removeEventListener('app:transports-updated', syncTransports);
       window.removeEventListener('app:restaurants-updated', syncRestaurants);
+      window.removeEventListener('app:services-control-updated', syncServicesControl);
     };
   }, []);
 
@@ -39,10 +43,12 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
   const activeTab = filter.activeTab || 'hotels';
   const rawQuery = (filter.query || filter.destination || '').toLowerCase().trim();
 
-  // Compute filtered items based on activeTab
+  // Compute filtered items based on activeTab (never show disabled service posts)
   let filteredItems = [];
 
-  if (activeTab === 'hotels') {
+  if (servicesControl?.[activeTab] === false) {
+    filteredItems = [];
+  } else if (activeTab === 'hotels') {
     filteredItems = hotels.filter((h) => {
       if (!rawQuery) return true;
       const haystack = [
@@ -65,6 +71,7 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
     const terms = [pickup, dropoff].filter(Boolean);
 
     filteredItems = transports.filter((t) => {
+      if (servicesControl?.[t.category] === false) return false;
       const matchesCat = !cat || (t.category || '').toLowerCase() === cat;
       if (!matchesCat) return false;
       if (terms.length === 0) return true;

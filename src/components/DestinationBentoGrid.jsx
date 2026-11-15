@@ -66,6 +66,10 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
     }
   };
 
+  if (!Array.isArray(destinations) || destinations.length === 0) {
+    return null;
+  }
+
   return (
     <section id="destinations" className="relative py-[5px] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Section Header */}
@@ -187,7 +191,7 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.8 }}
               className={`
-                group relative shrink-0 snap-start w-[85%] sm:w-[350px] lg:w-[385px] h-[500px] sm:h-[540px] rounded-3xl overflow-hidden cursor-pointer
+                group relative shrink-0 snap-start w-[82%] sm:w-[320px] lg:w-[350px] h-[280px] sm:h-[320px] lg:h-[340px] rounded-3xl overflow-hidden cursor-pointer
                 border transition-all duration-500
                 ${isSelected 
                   ? 'border-[#69EBDA] shadow-[0_0_35px_rgba(105,235,218,0.4)] ring-2 ring-[#69EBDA]/50' 

@@ -20,6 +20,7 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
   const [transports, setTransports] = useState(() => StorageService.getTransports());
   const [hotels, setHotels] = useState(() => StorageService.getHotels());
   const [restaurants, setRestaurants] = useState(() => StorageService.getRestaurants());
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollContainerRef = useRef(null);
 
@@ -29,16 +30,19 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       setTransports(StorageService.getTransports());
       setHotels(StorageService.getHotels());
       setRestaurants(StorageService.getRestaurants());
+      setServicesControl(StorageService.getServicesControl());
     };
     window.addEventListener('app:transports-updated', handleSync);
     window.addEventListener('app:transport-categories-updated', handleSync);
     window.addEventListener('app:hotels-updated', handleSync);
     window.addEventListener('app:restaurants-updated', handleSync);
+    window.addEventListener('app:services-control-updated', handleSync);
     return () => {
       window.removeEventListener('app:transports-updated', handleSync);
       window.removeEventListener('app:transport-categories-updated', handleSync);
       window.removeEventListener('app:hotels-updated', handleSync);
       window.removeEventListener('app:restaurants-updated', handleSync);
+      window.removeEventListener('app:services-control-updated', handleSync);
     };
   }, []);
 
@@ -60,10 +64,11 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
 
   const allCards = [
     ...categories.map((cat) => {
-      const availableCount = transports.filter((t) => t.category === cat.id).length;
+      const isCatDisabled = servicesControl?.transport === false || servicesControl?.[cat.id] === false;
+      const availableCount = isCatDisabled ? 0 : transports.filter((t) => t.category === cat.id).length;
       return {
         ...cat,
-        countLabel: `${availableCount} টি বাহন উপলব্ধ`,
+        countLabel: isCatDisabled ? 'Currently Off' : `${availableCount} টি বাহন উপলব্ধ`,
         ctaLabel: 'বাহনসমূহ দেখুন',
         onClick: () => onSelectCategory?.(cat.id)
       };
@@ -75,12 +80,14 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       badge: 'Hotel Services',
       icon: 'Hotel',
       photo:
-        hotels[0]?.image ||
-        hotels[0]?.photo ||
-        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80',
+        servicesControl?.hotels === false
+          ? 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80'
+          : hotels[0]?.image ||
+            hotels[0]?.photo ||
+            'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80',
       description:
         'প্রিমিয়াম রিসোর্ট, ওভারওয়াটার ভিলা ও ৫-তারকা হোটেল রুম বুকিং সুবিধা রিয়েলটাইম প্রাইস ও রিভিউসহ।',
-      countLabel: `${hotels.length} টি হোটেল উপলব্ধ`,
+      countLabel: servicesControl?.hotels === false ? 'Currently Off' : `${hotels.length} টি হোটেল উপলব্ধ`,
       ctaLabel: 'হোটেলসমূহ দেখুন',
       onClick: () => onSelectService?.('hotels')
     },
@@ -91,12 +98,14 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       badge: 'Restaurant Services',
       icon: 'UtensilsCrossed',
       photo:
-        restaurants[0]?.photo ||
-        restaurants[0]?.defaultPhoto ||
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
+        servicesControl?.restaurant === false
+          ? 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80'
+          : restaurants[0]?.photo ||
+            restaurants[0]?.defaultPhoto ||
+            'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
       description:
         'লাইভ সি-ফুড বারবিকিউ, ৩-বেলা ফুল-বোর্ড মিল প্ল্যান ও এক্সক্লুসিভ ডাইনিং টেবিল বুকিং সেবা।',
-      countLabel: `${restaurants.length} টি মেনু উপলব্ধ`,
+      countLabel: servicesControl?.restaurant === false ? 'Currently Off' : `${restaurants.length} টি মেনু উপলব্ধ`,
       ctaLabel: 'ডাইনিং দেখুন',
       onClick: () => onSelectService?.('restaurant')
     }

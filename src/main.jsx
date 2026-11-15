@@ -4,6 +4,7 @@ import App from './App.jsx';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
+import { HelmetProvider } from './context/HelmetContext';
 import './index.css';
 
 class AppErrorBoundary extends React.Component {
@@ -64,13 +65,15 @@ if (typeof Node === 'function' && Node.prototype) {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <ThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </LanguageProvider>
-      </ThemeProvider>
+      <HelmetProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </HelmetProvider>
     </AppErrorBoundary>
   </React.StrictMode>,
 );

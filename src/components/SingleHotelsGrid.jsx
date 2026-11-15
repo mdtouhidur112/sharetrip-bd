@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Flame } from 'lucide-react';
-import { StorageService, INITIAL_HOTELS } from '../services/storageService';
+import { StorageService } from '../services/storageService';
 import { SingleHotelCard } from './SingleHotelCard';
 
 export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery }) => {
   const [hotels, setHotels] = useState(() => StorageService.getHotels() || []);
   const [bookings, setBookings] = useState(() => StorageService.getBookings() || []);
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
   const [, setReviewVersion] = useState(0);
 
   useEffect(() => {
@@ -18,15 +19,22 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
     const syncReviews = () => {
       setReviewVersion((v) => v + 1);
     };
+    const syncServicesControl = () => {
+      setServicesControl(StorageService.getServicesControl());
+    };
     window.addEventListener('app:hotels-updated', syncHotels);
     window.addEventListener('app:bookings-updated', syncBookings);
     window.addEventListener('app:hotel-reviews-updated', syncReviews);
+    window.addEventListener('app:services-control-updated', syncServicesControl);
     return () => {
       window.removeEventListener('app:hotels-updated', syncHotels);
       window.removeEventListener('app:bookings-updated', syncBookings);
       window.removeEventListener('app:hotel-reviews-updated', syncReviews);
+      window.removeEventListener('app:services-control-updated', syncServicesControl);
     };
   }, []);
+
+  if (servicesControl?.hotels === false) return null;
 
   // Filter hotels by selected destination/category or search query if active
   const filteredHotels = hotels.filter((h) => {
@@ -50,8 +58,8 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
     return matchesCategory && matchesSearch;
   });
 
-  // Base list (graceful fallback if filter matches nothing)
-  const baseHotels = filteredHotels.length > 0 ? filteredHotels : (hotels.length > 0 ? hotels : INITIAL_HOTELS);
+  // Base list (real database hotels only)
+  const baseHotels = filteredHotels.length > 0 ? filteredHotels : hotels;
 
   // Rank by popularity: live booking count + review count + rating
   const getPopularityScore = (hotel) => {
@@ -87,7 +95,7 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
       </div>
 
       {/* Responsive Grid: Top 4 Most Popular Bookings */}
-      <div className="max-w-7xl min-[1650px]:max-w-[2200px] mx-auto grid grid-cols-1 lg:grid-cols-2 min-[1650px]:grid-cols-3 min-[2200px]:grid-cols-4 gap-5 sm:gap-6 lg:gap-8">
+      <div className="max-w-7xl min-[1650px]:max-w-[2200px] mx-auto flex md:grid md:grid-cols-2 min-[1650px]:grid-cols-3 min-[2200px]:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start">
         {popularHotels.slice(0, 4).map((hotel) => (
           <SingleHotelCard
             key={hotel.id}

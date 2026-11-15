@@ -320,6 +320,12 @@ export const BookingsManager = ({
                 <span className="text-slate-300 dark:text-slate-400">ভ্রমণের তারিখ:</span>
                 <span className="text-white font-medium">{selectedBookingDetails.travelDate} ({selectedBookingDetails.travelers} জন)</span>
               </div>
+              {selectedBookingDetails.tripType && (
+                <div className="flex justify-between">
+                  <span className="text-slate-300 dark:text-slate-400">ট্রিপের ধরন:</span>
+                  <span className="font-bold text-[#69EBDA]">{selectedBookingDetails.tripType}</span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t border-white/15 dark:border-white/10">
                 <span className="font-bold text-[#69EBDA]">মোট খরচ:</span>
                 <span className="font-black text-white text-base">{selectedBookingDetails.totalPrice}</span>

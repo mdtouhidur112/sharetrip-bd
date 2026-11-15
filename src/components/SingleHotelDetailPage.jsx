@@ -30,7 +30,7 @@ import {
   Send,
   ThumbsUp
 } from 'lucide-react';
-import { DynamicReactIcon } from '../utils/reactIconParser';
+import { DynamicReactIcon, parseReactIconInput } from '../utils/reactIconParser';
 import { StorageService } from '../services/storageService';
 import { HotelReviewService } from '../services/hotelReviewService';
 import {
@@ -314,8 +314,198 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
   const guestCount = adultCount + childrenCount;
   const [roomCount, setRoomCount] = useState(1);
   const [seatCount, setSeatCount] = useState(1);
+  const [tripType, setTripType] = useState('One-Way');
   const [routeFrom, setRouteFrom] = useState('');
   const [routeTo, setRouteTo] = useState('');
+
+  // Restaurant-specific booking states
+  const [restaurantGuests, setRestaurantGuests] = useState(2);
+  const [selectedRestaurantDates, setSelectedRestaurantDates] = useState(() => [tomorrowISO]);
+  const [isFoodMenuModalOpen, setIsFoodMenuModalOpen] = useState(false);
+  const [isSelectedFoodsModalOpen, setIsSelectedFoodsModalOpen] = useState(false);
+  const [showAllDaysInSummary, setShowAllDaysInSummary] = useState(false);
+  const [previewFoodItem, setPreviewFoodItem] = useState(null);
+  const [activeMealTab, setActiveMealTab] = useState('breakfast'); // 'breakfast' | 'lunch' | 'dinner'
+  const [activeFoodGuest, setActiveFoodGuest] = useState(1);
+  const [activeFoodDate, setActiveFoodDate] = useState(() => tomorrowISO);
+  const [selectedFoodByDateGuest, setSelectedFoodByDateGuest] = useState({});
+  const [hasConfirmedFoodMenu, setHasConfirmedFoodMenu] = useState(false);
+
+  useEffect(() => {
+    if (activeFoodGuest > restaurantGuests) {
+      setActiveFoodGuest(Math.max(1, restaurantGuests));
+    }
+  }, [restaurantGuests, activeFoodGuest]);
+
+  const availableFoodDates = useMemo(
+    () => (selectedRestaurantDates.length > 0 ? selectedRestaurantDates : [tomorrowISO]),
+    [selectedRestaurantDates, tomorrowISO]
+  );
+
+  useEffect(() => {
+    if (!availableFoodDates.includes(activeFoodDate)) {
+      setActiveFoodDate(availableFoodDates[0]);
+    }
+  }, [availableFoodDates, activeFoodDate]);
+
+  const activeFoodDateIndex = Math.max(0, availableFoodDates.indexOf(activeFoodDate));
+
+  const handleStepFoodDate = (delta) => {
+    if (availableFoodDates.length <= 1) return;
+    const nextIdx = Math.min(
+      availableFoodDates.length - 1,
+      Math.max(0, activeFoodDateIndex + delta)
+    );
+    setActiveFoodDate(availableFoodDates[nextIdx]);
+  };
+
+  const restaurantGuestNumbers = useMemo(
+    () => Array.from({ length: Math.max(1, restaurantGuests) }, (_, i) => i + 1),
+    [restaurantGuests]
+  );
+
+  const restaurantMenuByMeal = useMemo(() => {
+    if (!isRestaurant) return { breakfast: [], lunch: [], dinner: [] };
+    const defaultItemPrice = Math.max(
+      120,
+      Math.round(Number(hotel.bookingPrice ?? hotel.ratePerPerson ?? 600) / 3)
+    );
+    const mealFallbacks = {
+      breakfast: {
+        items: ['বুফে ব্রেকফাস্ট প্ল্যাটার', 'পরাটা ও ভুনা খিচুড়ি', 'কফি ও ফ্রেশ জুস'],
+        photo: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=600&q=80'
+      },
+      lunch: {
+        items: ['স্পেশাল কাচ্চি / পোলাও', 'গ্রিলড চিকেন ও নান', 'ফ্রেশ সালাদ ও ড্রিঙ্কস'],
+        photo: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+      },
+      dinner: {
+        items: ['লাইভ বারবিকিউ প্ল্যাটার', 'তান্দুরি চিকেন ও নান', 'স্পেশাল ডেজার্ট'],
+        photo: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80'
+      }
+    };
+
+    const normalizeList = (rawList, mealKey) => {
+      const source = Array.isArray(rawList) && rawList.length > 0 ? rawList : mealFallbacks[mealKey].items;
+      return source.map((entry, idx) => {
+        if (entry && typeof entry === 'object') {
+          return {
+            key: `${mealKey}-${idx}`,
+            meal: mealKey,
+            name: entry.name || entry.title || `মেনু আইটেম ${idx + 1}`,
+            price: Number(entry.price) > 0 ? Number(entry.price) : defaultItemPrice,
+            photo: entry.photo || entry.image || hotel.photo || mealFallbacks[mealKey].photo
+          };
+        }
+        const rawStr = String(entry || '').trim();
+        const priceMatch = rawStr.match(/[:\-–]\s*(\d+)\s*$/);
+        const parsedPrice = priceMatch ? Number(priceMatch[1]) : defaultItemPrice;
+        const cleanName = priceMatch ? rawStr.replace(/[:\-–]\s*\d+\s*$/, '').trim() : rawStr;
+        return {
+          key: `${mealKey}-${idx}`,
+          meal: mealKey,
+          name: cleanName || `মেনু আইটেম ${idx + 1}`,
+          price: parsedPrice > 0 ? parsedPrice : defaultItemPrice,
+          photo: hotel.photo || hotel.defaultPhoto || mealFallbacks[mealKey].photo
+        };
+      });
+    };
+
+    return {
+      breakfast: normalizeList(hotel.breakfastMenu, 'breakfast'),
+      lunch: normalizeList(hotel.lunchMenu, 'lunch'),
+      dinner: normalizeList(hotel.dinnerMenu, 'dinner')
+    };
+  }, [isRestaurant, hotel]);
+
+  const selectedFoodList = useMemo(() => {
+    const items = [];
+    availableFoodDates.forEach((dateStr) => {
+      const dateMap = selectedFoodByDateGuest[dateStr] || {};
+      for (let g = 1; g <= restaurantGuests; g++) {
+        const guestMap = dateMap[g] || {};
+        Object.values(guestMap).forEach((item) => {
+          if (item && item.qty > 0) {
+            items.push({ ...item, dateStr, guestIndex: g });
+          }
+        });
+      }
+    });
+    return items;
+  }, [selectedFoodByDateGuest, availableFoodDates, restaurantGuests]);
+
+  const activeGuestFoodMap =
+    (selectedFoodByDateGuest[activeFoodDate] &&
+      selectedFoodByDateGuest[activeFoodDate][activeFoodGuest]) ||
+    {};
+
+  const activeGuestFoodList = useMemo(
+    () => Object.values(activeGuestFoodMap).filter((item) => item && item.qty > 0),
+    [activeGuestFoodMap]
+  );
+
+  const activeGuestFoodTotal = useMemo(
+    () => activeGuestFoodList.reduce((sum, item) => sum + item.price * item.qty, 0),
+    [activeGuestFoodList]
+  );
+
+  const totalSelectedFoodQty = useMemo(
+    () => selectedFoodList.reduce((sum, item) => sum + item.qty, 0),
+    [selectedFoodList]
+  );
+
+  const selectedFoodTotalAllDates = useMemo(
+    () => selectedFoodList.reduce((sum, item) => sum + item.price * item.qty, 0),
+    [selectedFoodList]
+  );
+
+  const handleToggleSelectFood = (item, guestIdx = activeFoodGuest, dateStr = activeFoodDate) => {
+    setSelectedFoodByDateGuest((prev) => {
+      const dateMap = prev[dateStr] || {};
+      const guestMap = dateMap[guestIdx] || {};
+      const existing = guestMap[item.key];
+      if (existing && existing.qty > 0) {
+        const nextGuestMap = { ...guestMap };
+        delete nextGuestMap[item.key];
+        return { ...prev, [dateStr]: { ...dateMap, [guestIdx]: nextGuestMap } };
+      }
+      return {
+        ...prev,
+        [dateStr]: {
+          ...dateMap,
+          [guestIdx]: {
+            ...guestMap,
+            [item.key]: { ...item, qty: 1, dateStr, guestIndex: guestIdx }
+          }
+        }
+      };
+    });
+  };
+
+  const handleUpdateFoodQty = (key, delta, guestIdx = activeFoodGuest, dateStr = activeFoodDate) => {
+    setSelectedFoodByDateGuest((prev) => {
+      const dateMap = prev[dateStr] || {};
+      const guestMap = dateMap[guestIdx] || {};
+      const existing = guestMap[key];
+      if (!existing) return prev;
+      const nextQty = existing.qty + delta;
+      if (nextQty <= 0) {
+        const nextGuestMap = { ...guestMap };
+        delete nextGuestMap[key];
+        return { ...prev, [dateStr]: { ...dateMap, [guestIdx]: nextGuestMap } };
+      }
+      return {
+        ...prev,
+        [dateStr]: {
+          ...dateMap,
+          [guestIdx]: {
+            ...guestMap,
+            [key]: { ...existing, qty: Math.min(99, nextQty) }
+          }
+        }
+      };
+    });
+  };
 
   const routeFares = useMemo(
     () => (isTransport && Array.isArray(hotel.routeFares) ? hotel.routeFares : []),
@@ -428,6 +618,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       : Number(hotel.bookingPrice ?? hotel.pricePerNight ?? 3500);
   const effectiveCheckOutDate = checkOutDate || (checkInDate ? addDaysISO(checkInDate, 1) : addDaysISO(todayISO, 1));
   const calculatedDays = useMemo(() => {
+    if (isRestaurant) {
+      return selectedRestaurantDates.length;
+    }
     if (!checkInDate) return 1;
     if (isSelectingCheckOut && hoverDate) {
       const minD = hoverDate < checkInDate ? hoverDate : checkInDate;
@@ -435,11 +628,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       return Math.max(1, diffDaysISO(minD, maxD));
     }
     return Math.max(1, diffDaysISO(checkInDate, effectiveCheckOutDate));
-  }, [checkInDate, effectiveCheckOutDate, isSelectingCheckOut, hoverDate]);
+  }, [isRestaurant, selectedRestaurantDates, checkInDate, effectiveCheckOutDate, isSelectingCheckOut, hoverDate]);
+  const effectiveGuestCount = isRestaurant ? restaurantGuests : guestCount;
   const baseRentPrice = isTransport
-    ? perDayPrice * calculatedDays * seatCount
+    ? perDayPrice * calculatedDays * seatCount * (tripType === 'Round-Trip' ? 2 : 1)
     : isRestaurant
-      ? perDayPrice * calculatedDays * guestCount
+      ? (selectedFoodList.length > 0
+          ? selectedFoodTotalAllDates
+          : perDayPrice * calculatedDays * restaurantGuests)
       : perDayPrice * calculatedDays * roomCount;
   const vatTaxPercentage = Number(hotel.vatTaxPercentage ?? 5);
 
@@ -483,7 +679,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       let isEnd = false;
       let isInRange = false;
 
-      if (isSelectingCheckOut && checkInDate) {
+      if (isRestaurant) {
+        isStart = selectedRestaurantDates.includes(dateStr);
+      } else if (isSelectingCheckOut && checkInDate) {
         if (hoverDate) {
           const minDate = hoverDate < checkInDate ? hoverDate : checkInDate;
           const maxDate = hoverDate > checkInDate ? hoverDate : checkInDate;
@@ -513,12 +711,21 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       });
     }
     return daysArray;
-  }, [calendarViewDate, checkInDate, checkOutDate, isSelectingCheckOut, hoverDate]);
+  }, [isRestaurant, selectedRestaurantDates, calendarViewDate, checkInDate, checkOutDate, isSelectingCheckOut, hoverDate]);
 
-  // Calendar click handler for 2 dates range selection (Supports 1 to 5, 5 to 10, 20 to 25, 20 to 22, etc.)
+  // Calendar click handler for 2 dates range selection (or multi-day toggle for Restaurant)
   const handleCalendarDayClick = (dayObj) => {
     if (!dayObj) return;
     const clickedStr = dayObj.dateStr;
+
+    if (isRestaurant) {
+      setSelectedRestaurantDates((prev) =>
+        prev.includes(clickedStr)
+          ? prev.filter((d) => d !== clickedStr)
+          : [...prev, clickedStr].sort()
+      );
+      return;
+    }
 
     if (isSelectingCheckOut && checkInDate) {
       // Second click:
@@ -614,19 +821,24 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
         customerEmail: customerEmail.trim() || undefined,
         customerPhone: customerPhone.trim(),
         customerWhatsApp: customerWhatsApp.trim(),
-        checkInDate,
-        checkOutDate,
+        checkInDate: isRestaurant ? (selectedRestaurantDates[0] || checkInDate) : checkInDate,
+        checkOutDate: isRestaurant ? (selectedRestaurantDates[selectedRestaurantDates.length - 1] || checkOutDate) : checkOutDate,
+        selectedDates: isRestaurant ? selectedRestaurantDates : undefined,
         days: calculatedDays,
         rooms: isTransport || isRestaurant ? 1 : roomCount,
-        guests: isTransport ? seatCount : guestCount,
-        adults: isTransport ? undefined : adultCount,
-        children: isTransport ? undefined : childrenCount,
+        guests: isTransport ? seatCount : effectiveGuestCount,
+        adults: isTransport || isRestaurant ? undefined : adultCount,
+        children: isTransport || isRestaurant ? undefined : childrenCount,
         seats: isTransport ? seatCount : undefined,
+        tripType: isTransport ? tripType : undefined,
         routeFrom: isTransport ? routeFrom.trim() : undefined,
         routeTo: isTransport ? routeTo.trim() : undefined,
+        selectedFoods: isRestaurant && selectedFoodList.length > 0 ? selectedFoodList : undefined,
         specialNotes: isTransport
-          ? `সিট: ${seatCount} টি${routeFrom.trim() || routeTo.trim() ? ` | রুট: ${routeFrom.trim() || 'নির্ধারিত নয়'} → ${routeTo.trim() || 'নির্ধারিত নয়'}` : ''}`
-          : `Adults: ${adultCount}, Children: ${childrenCount}`,
+          ? `ট্রিপ: ${tripType} | সিট: ${seatCount} টি${routeFrom.trim() || routeTo.trim() ? ` | রুট: ${routeFrom.trim() || 'নির্ধারিত নয়'} → ${routeTo.trim() || 'নির্ধারিত নয়'}` : ''}`
+          : isRestaurant
+            ? `গেস্ট: ${restaurantGuests} জন | তারিখ (${selectedRestaurantDates.length} দিন): ${selectedRestaurantDates.join(', ')}${selectedFoodList.length > 0 ? ` | খাবার: ${selectedFoodList.map((f) => `${f.dateStr} (Guest ${f.guestIndex}): ${f.name} x${f.qty}`).join(', ')}` : ''}`
+            : `Adults: ${adultCount}, Children: ${childrenCount}`,
         perDayPrice,
         basePrice: baseRentPrice,
         discount: discountAmount,
@@ -1087,7 +1299,16 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 hover:border-teal-500/40 transition-colors"
                   >
                     <div className="w-9 h-9 rounded-xl bg-teal-500/10 dark:bg-[#69EBDA]/20 text-teal-700 dark:text-[#69EBDA] flex items-center justify-center shrink-0">
-                      <DynamicReactIcon iconCode={item.icon || ''} className="w-4 h-4" />
+                      {(() => {
+                        const rawIcon = item.icon || item.iconCode || item.iconInput || '';
+                        if (rawIcon && parseReactIconInput(rawIcon)) {
+                          return <DynamicReactIcon iconCode={rawIcon} className="w-4 h-4" />;
+                        }
+                        if (rawIcon) {
+                          return <span className="text-base leading-none">{rawIcon}</span>;
+                        }
+                        return <CheckCircle2 className="w-4 h-4" />;
+                      })()}
                     </div>
                     <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 line-clamp-1">
                       {item.text || item.info}
@@ -1166,7 +1387,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : isRestaurant ? null : (
               <div className="flex flex-col sm:items-end gap-2 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-teal-500/20 dark:border-white/10 w-full sm:w-auto">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-[#69EBDA] flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
@@ -1294,24 +1515,58 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               </div>
             </div>
 
-            {/* Selected Dates Display (Since when & Until when as requested) */}
-            <div className="grid grid-cols-2 gap-2.5 mb-5 p-3.5 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200/80 dark:border-teal-500/25">
-              <div className="space-y-0.5">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] block">
-                  Since when (Check-in)
-                </span>
-                <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
-                  {toDisplayDate(checkInDate)}
-                </span>
+            {/* Selected Dates Display */}
+            {isRestaurant ? (
+              <div className="mb-5 p-3.5 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200/80 dark:border-teal-500/25 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA]">
+                    নির্বাচিত দিন ({selectedRestaurantDates.length} দিন)
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                    তারিখে ক্লিক করে সিলেক্ট / আনসিলেক্ট করুন
+                  </span>
+                </div>
+                {selectedRestaurantDates.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedRestaurantDates.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() =>
+                          setSelectedRestaurantDates((prev) => prev.filter((item) => item !== d))
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-teal-300 dark:border-[#69EBDA]/40 text-[11px] font-bold text-slate-800 dark:text-white flex items-center gap-1 cursor-pointer hover:border-rose-400"
+                        title="আনসিলেক্ট করতে ক্লিক করুন"
+                      >
+                        <span>{toDisplayDate(d)}</span>
+                        <X className="w-3 h-3 text-rose-500" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    ক্যালেন্ডার থেকে কমপক্ষে ১টি দিন সিলেক্ট করুন
+                  </p>
+                )}
               </div>
-              <div className="space-y-0.5 text-right sm:text-left">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] block">
-                  Until when (Check-out)
-                </span>
-                <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
-                  {checkOutDate ? (
-                    toDisplayDate(checkOutDate)
-                  ) : isSelectingCheckOut && hoverDate ? (
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 mb-5 p-3.5 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200/80 dark:border-teal-500/25">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] block">
+                    Since when (Check-in)
+                  </span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
+                    {toDisplayDate(checkInDate)}
+                  </span>
+                </div>
+                <div className="space-y-0.5 text-right sm:text-left">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] block">
+                    Until when (Check-out)
+                  </span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono">
+                    {checkOutDate ? (
+                      toDisplayDate(checkOutDate)
+                    ) : isSelectingCheckOut && hoverDate ? (
                     <span className="text-teal-600 dark:text-[#69EBDA] font-bold">
                       {toDisplayDate(hoverDate)}
                     </span>
@@ -1323,6 +1578,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 </span>
               </div>
             </div>
+            )}
 
             {/* Full Visual Monthly Interactive Calendar (30 Days with Month Name) */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 mb-5">
@@ -1415,6 +1671,30 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             {isTransport ? (
               <div className="space-y-3 mb-5">
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+                    ট্রিপের ধরন (Trip Type)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['One-Way', 'Round-Trip'].map((type) => {
+                      const active = tripType === type;
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setTripType(type)}
+                          className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                            active
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                          }`}
+                        >
+                          <span>{type}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                     সিট সংখ্যা (Seat Count)
                   </label>
@@ -1490,54 +1770,54 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             ) : isRestaurant ? (
               <div className="mb-5 space-y-2.5">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  অতিথি / মিল সংখ্যা (মোট: {guestCount} জন)
+                  অতিথি সংখ্যা (Guest: {restaurantGuests} জন)
                 </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">Adults</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">17+ years</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setAdultCount((prev) => Math.max(1, prev - 1))}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-xs font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs font-black text-slate-900 dark:text-white w-4 text-center">{adultCount}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAdultCount((prev) => Math.min(20, prev + 1))}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-xs font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Guest</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">কতজন গেস্ট খাবার খাবে</p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">Children</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">1 - 17 years</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantGuests((prev) => Math.max(1, prev - 1))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-sm font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="text-sm font-black text-slate-900 dark:text-white w-6 text-center">{restaurantGuests}</span>
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantGuests((prev) => Math.min(50, prev + 1))}
+                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-sm font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Choose your favorite food list (below Guest selector) */}
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 space-y-2.5">
+                  <span className="block text-xs font-extrabold text-teal-700 dark:text-[#69EBDA]">
+                    Choose your favorite food list
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsFoodMenuModalOpen(true)}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 font-extrabold text-xs shadow-sm cursor-pointer transition-all"
+                    >
+                      খাবারের মেনু
+                    </button>
+                    {hasConfirmedFoodMenu && selectedFoodList.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setChildrenCount((prev) => Math.max(0, prev - 1))}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-xs font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
+                        onClick={() => setIsSelectedFoodsModalOpen(true)}
+                        className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white/15 hover:bg-slate-800 text-[#69EBDA] border border-[#69EBDA]/40 font-extrabold text-xs shadow-sm cursor-pointer transition-all"
                       >
-                        -
+                        সিলেক্ট করা খাবার ({totalSelectedFoodQty})
                       </button>
-                      <span className="text-xs font-black text-slate-900 dark:text-white w-4 text-center">{childrenCount}</span>
-                      <button
-                        type="button"
-                        onClick={() => setChildrenCount((prev) => Math.min(15, prev + 1))}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 text-xs font-black text-slate-800 dark:text-white hover:border-[#69EBDA] cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1630,7 +1910,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   {isTransport
                     ? `গাড়ি ভাড়া (${calculatedDays} দিন × ৳${perDayPrice.toLocaleString('en-IN')} • ${seatCount} সিট)`
                     : isRestaurant
-                      ? `ডাইনিং চার্জ (${calculatedDays} দিন × ${guestCount} জন × ৳${perDayPrice.toLocaleString('en-IN')})`
+                      ? selectedFoodList.length > 0
+                        ? `নির্বাচিত খাবার (${totalSelectedFoodQty} টি আইটেম × ${calculatedDays} দিন)`
+                        : `ডাইনিং চার্জ (${calculatedDays} দিন × ${restaurantGuests} জন × ৳${perDayPrice.toLocaleString('en-IN')})`
                       : `রুম ভাড়া (${calculatedDays} দিন × ${roomCount} রুম × ৳${perDayPrice.toLocaleString('en-IN')})`}
                 </span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
@@ -1652,7 +1934,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     {isTransport
                       ? `Total calculation for ${calculatedDays} day${calculatedDays > 1 ? 's' : ''} (${seatCount} seat${seatCount > 1 ? 's' : ''})`
                       : isRestaurant
-                        ? `Total calculation for ${calculatedDays} day${calculatedDays > 1 ? 's' : ''} (${guestCount} guest${guestCount > 1 ? 's' : ''})`
+                        ? `Total calculation for ${calculatedDays} day${calculatedDays > 1 ? 's' : ''} (${restaurantGuests} guest${restaurantGuests > 1 ? 's' : ''}${selectedFoodList.length > 0 ? ` • ${totalSelectedFoodQty} items` : ''})`
                         : `Total calculation for ${calculatedDays} day${calculatedDays > 1 ? 's' : ''} (${roomCount} room${roomCount > 1 ? 's' : ''})`}
                   </span>
                 </div>
@@ -1665,7 +1947,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             {/* Booking Now Button */}
             <button
               onClick={() => {
-                if (!checkOutDate) {
+                if (isRestaurant && selectedRestaurantDates.length === 0) {
+                  setSelectedRestaurantDates([tomorrowISO]);
+                } else if (!isRestaurant && !checkOutDate) {
                   setCheckOutDate(effectiveCheckOutDate);
                   setIsSelectingCheckOut(false);
                 }
@@ -1993,7 +2277,16 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/5"
                   >
                     <div className="w-10 h-10 rounded-xl bg-teal-500/10 dark:bg-[#69EBDA]/20 text-teal-700 dark:text-[#69EBDA] flex items-center justify-center shrink-0">
-                      <DynamicReactIcon iconCode={item.icon || ''} className="w-5 h-5" />
+                      {(() => {
+                        const rawIcon = item.icon || item.iconCode || item.iconInput || '';
+                        if (rawIcon && parseReactIconInput(rawIcon)) {
+                          return <DynamicReactIcon iconCode={rawIcon} className="w-5 h-5" />;
+                        }
+                        if (rawIcon) {
+                          return <span className="text-lg leading-none">{rawIcon}</span>;
+                        }
+                        return <CheckCircle2 className="w-5 h-5" />;
+                      })()}
                     </div>
                     <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {item.text || item.info}
@@ -2245,7 +2538,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         {isTransport
                           ? `গাড়ি ভাড়া (${calculatedDays} দিন • ${seatCount} সিট${routeFrom || routeTo ? ` • ${routeFrom || '?'} → ${routeTo || '?'}` : ''})`
                           : isRestaurant
-                            ? `ডাইনিং চার্জ (${calculatedDays} দিন × ${guestCount} জন)`
+                            ? selectedFoodList.length > 0
+                              ? `নির্বাচিত খাবার (${totalSelectedFoodQty} আইটেম × ${calculatedDays} দিন • ${restaurantGuests} জন)`
+                              : `ডাইনিং চার্জ (${calculatedDays} দিন × ${restaurantGuests} জন)`
                             : `রুম ভাড়া (${calculatedDays} দিন × ${roomCount} রুম)`}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
@@ -2422,11 +2717,11 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       </motion.button>
 
       {/* ============================================================== */}
-      {/* MODAL 5: Premium Messaging UI Review & Comment Popup Modal     */}
+      {/* MODAL 5: Clean Simple Review Text Box Popup Modal              */}
       {/* ============================================================== */}
       <AnimatePresence>
         {isReviewModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2436,114 +2731,630 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             />
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 18 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 18 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
               transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-              className="relative z-10 w-full max-w-lg rounded-3xl overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-300/80 dark:border-white/15 shadow-[0_28px_70px_rgba(0,0,0,0.55)] my-auto flex flex-col max-h-[88dvh]"
+              className="relative z-10 w-full max-w-md rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 shadow-2xl my-auto p-5 sm:p-6"
             >
-              {/* Messaging Top Bar */}
-              <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white border-b border-white/10">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#69EBDA] to-teal-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-md">
-                      {(hotel.name || 'H').charAt(0).toUpperCase()}
-                    </div>
-                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-900" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base font-black text-white truncate">
-                      {hotel.name}
-                    </h3>
-                    <p className="text-[11px] font-semibold text-[#69EBDA] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#69EBDA] animate-pulse" />
-                      <span>{editingReviewId ? 'মেসেজ এডিট মোড' : 'লাইভ রিভিউ ও মতামত মেসেজিং'}</span>
-                    </p>
-                  </div>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                    {editingReviewId ? 'রিভিউ আপডেট করুন' : 'আপনার রিভিউ লিখুন'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {hotel.name}
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsReviewModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Chat Thread Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-slate-50/90 dark:bg-slate-950/60 custom-scrollbar min-h-[200px] max-h-[42dvh]">
-                {/* Incoming Host Prompt Bubble */}
-                <div className="flex items-end gap-2.5 max-w-[85%]">
-                  <div className="w-7 h-7 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 text-[#69EBDA] flex items-center justify-center text-[11px] font-black shrink-0">
-                    {(hotel.name || 'A').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 shadow-xs text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                    হ্যালো <span className="font-bold text-teal-600 dark:text-[#69EBDA]">{user?.name || 'গেস্ট'}</span>! আমাদের সার্ভিস ও পরিবেশ সম্পর্কে আপনার মূল্যবান মতামত মেসেজ করে জানান।
+              <form onSubmit={handleSubmitReview} className="space-y-4">
+                {/* Star Rating Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    রেটিং দিন
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRatingValue(star)}
+                        className="p-1 cursor-pointer transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            star <= reviewRatingValue
+                              ? 'text-amber-400 fill-amber-400'
+                              : 'text-slate-300 dark:text-slate-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Recent Reviews as Chat Bubbles */}
-                {hotelReviews.slice(0, 4).map((rev) => (
-                  <div key={rev.id} className="flex flex-col items-end space-y-1">
-                    <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-teal-500/20 to-[#69EBDA]/15 border border-[#69EBDA]/35 text-slate-800 dark:text-slate-100 text-xs sm:text-sm shadow-xs leading-relaxed">
-                      {rev.comment}
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-400 px-1">
-                      {rev.authorName || 'গেস্ট'} • {rev.dateLabel || 'সম্প্রতি'}
-                    </span>
-                  </div>
-                ))}
-
-                {/* Live Preview Bubble while typing */}
-                {reviewCommentText.trim() && (
-                  <div className="flex flex-col items-end space-y-1 opacity-80">
-                    <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-sm bg-[#69EBDA] text-slate-950 font-semibold text-xs sm:text-sm shadow-sm">
-                      {reviewCommentText}
-                    </div>
-                    <span className="text-[10px] font-bold text-[#69EBDA] px-1">
-                      ড্রাফট মেসেজ...
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Tap Chips + Messaging Composer */}
-              <form onSubmit={handleSubmitReview} className="p-3.5 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/10 space-y-3">
-                {/* Quick Sentiment Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {['দারুণ পরিবেশ ✨', 'চমৎকার সার্ভিস 👍', 'খাবার অনেক ভালো ছিল 🍽️', 'আবার আসবো ❤️'].map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() =>
-                        setReviewCommentText((prev) => (prev ? `${prev} ${chip}` : chip))
-                      }
-                      className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-[#69EBDA]/20 border border-slate-200 dark:border-white/10 hover:border-[#69EBDA]/50 text-[11px] font-bold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Messaging Input Box with Integrated Send Button */}
-                <div className="flex items-end gap-2 p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-300/80 dark:border-white/15 focus-within:border-[#69EBDA] focus-within:ring-2 focus-within:ring-[#69EBDA]/25 transition-all">
+                {/* Clean Text Box */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    মতামত
+                  </label>
                   <textarea
                     required
-                    rows={2}
+                    rows={4}
                     value={reviewCommentText}
                     onChange={(e) => setReviewCommentText(e.target.value)}
-                    placeholder="আপনার রিভিউ মেসেজ লিখুন..."
-                    className="flex-1 px-2.5 py-1.5 bg-transparent text-slate-900 dark:text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none resize-none leading-relaxed max-h-28"
+                    placeholder="আপনার অভিজ্ঞতা ও মতামত এখানে লিখুন..."
+                    className="w-full px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-white/15 focus:border-[#69EBDA] focus:ring-2 focus:ring-[#69EBDA]/25 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none resize-none leading-relaxed"
                   />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    বাতিল
+                  </button>
                   <button
                     type="submit"
-                    className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 flex items-center justify-center shadow-md shadow-[#69EBDA]/30 cursor-pointer transition-all active:scale-95"
-                    title={editingReviewId ? 'আপডেট পাঠান' : 'পাঠান'}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#69EBDA]/25 cursor-pointer transition-all"
                   >
-                    <Send className="w-4 h-4 stroke-[2.5]" />
+                    {editingReviewId ? 'আপডেট করুন' : 'রিভিউ সাবমিট করুন'}
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================== */}
+      {/* MODAL 6: Restaurant Food Menu Modal (সকাল / দুপুর / রাত)        */}
+      {/* ============================================================== */}
+      <AnimatePresence>
+        {isFoodMenuModalOpen && (
+          <div className="fixed inset-0 z-[105] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFoodMenuModalOpen(false)}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              className="relative z-10 w-full max-w-2xl rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 shadow-2xl my-auto flex flex-col max-h-[88dvh]"
+            >
+              {/* Header */}
+              <div className="px-5 sm:px-6 py-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      খাবারের মেনু (Food Menu)
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Select multiple foods and quantities as desired.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFoodMenuModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Calendar Date Switcher (< Date >) - Only Selected Dates */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200 dark:border-[#69EBDA]/30">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllDaysInSummary(false);
+                      handleStepFoodDate(-1);
+                    }}
+                    disabled={!showAllDaysInSummary && activeFoodDateIndex <= 0}
+                    className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
+                    title="আগের তারিখ"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="text-center flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                      {showAllDaysInSummary
+                        ? `সকল দিন (${availableFoodDates.length} দিন)`
+                        : `Day ${activeFoodDateIndex + 1} • ${toDisplayDate(activeFoodDate)}`}
+                    </span>
+                    {availableFoodDates.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllDaysInSummary((v) => !v)}
+                        className="px-2 py-0.5 rounded-lg bg-teal-500/15 text-[10px] font-extrabold text-teal-700 dark:text-[#69EBDA] cursor-pointer hover:bg-teal-500/25"
+                      >
+                        {showAllDaysInSummary ? 'একটি দিন' : 'সব দিন'}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllDaysInSummary(false);
+                      handleStepFoodDate(1);
+                    }}
+                    disabled={!showAllDaysInSummary && activeFoodDateIndex >= availableFoodDates.length - 1}
+                    className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
+                    title="পরের তারিখ"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Horizontal Scrollable Guest Selector (Guest 1, Guest 2, ...) */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {restaurantGuestNumbers.map((gNum) => {
+                    const isSelected = activeFoodGuest === gNum;
+                    const gCount = Object.values(
+                      (selectedFoodByDateGuest[activeFoodDate] && selectedFoodByDateGuest[activeFoodDate][gNum]) || {}
+                    ).reduce((s, it) => s + (it?.qty || 0), 0);
+                    return (
+                      <button
+                        key={gNum}
+                        type="button"
+                        onClick={() => setActiveFoodGuest(gNum)}
+                        className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-slate-900 dark:bg-[#69EBDA] text-[#69EBDA] dark:text-slate-950 border-slate-900 dark:border-[#69EBDA] shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 hover:border-[#69EBDA]/60'
+                        }`}
+                      >
+                        <span>Guest {gNum}</span>
+                        {gCount > 0 && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                              isSelected
+                                ? 'bg-[#69EBDA]/20 dark:bg-slate-950/20'
+                                : 'bg-teal-500/20 text-teal-700 dark:text-[#69EBDA]'
+                            }`}
+                          >
+                            {gCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top 3 Meal Switching Buttons: সকাল / দুপুর / রাত */}
+              <div className="px-5 sm:px-6 pt-3 pb-2 grid grid-cols-3 gap-2 border-b border-slate-100 dark:border-white/5 bg-slate-50/70 dark:bg-slate-950/40">
+                {[
+                  { id: 'breakfast', label: 'সকাল (Breakfast)' },
+                  { id: 'lunch', label: 'দুপুর (Lunch)' },
+                  { id: 'dinner', label: 'রাত (Dinner)' }
+                ].map((tab) => {
+                  const active = activeMealTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveMealTab(tab.id)}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+                        active
+                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 border-teal-400 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 hover:border-[#69EBDA]/60'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Food Items List */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+                {(restaurantMenuByMeal[activeMealTab] || []).map((item) => {
+                  const selected = activeGuestFoodMap[item.key];
+                  const qty = selected?.qty || 0;
+                  return (
+                    <div
+                      key={`${activeFoodDate}-${activeFoodGuest}-${item.key}`}
+                      className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                        qty > 0
+                          ? 'bg-teal-50/70 dark:bg-teal-950/30 border-teal-400/70 dark:border-[#69EBDA]/50'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={item.photo}
+                          alt={item.name}
+                          onClick={() => setPreviewFoodItem(item)}
+                          title="বড় করে দেখতে ক্লিক করুন"
+                          className="w-16 h-16 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-white/10 cursor-pointer hover:scale-105 transition-transform"
+                        />
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                            {item.name}
+                          </h4>
+                          <p className="text-xs font-black text-teal-700 dark:text-[#69EBDA] mt-0.5">
+                            ৳ {item.price.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Select or +/- Qty Controls */}
+                      <div className="shrink-0">
+                        {qty === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSelectFood(item)}
+                            className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white/10 hover:bg-teal-600 hover:text-white text-white text-xs font-extrabold cursor-pointer transition-colors"
+                          >
+                            Select
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-2 py-1 rounded-xl border border-teal-400/60">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateFoodQty(item.key, -1)}
+                              className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-800 dark:text-white font-black text-sm cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="w-6 text-center text-xs font-black text-slate-900 dark:text-white">
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateFoodQty(item.key, 1)}
+                              className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-500/20 text-slate-800 dark:text-white font-black text-sm cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer with Live Total & Done Button */}
+              <div className="px-5 sm:px-6 py-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold">
+                    মোট সিলেক্ট করা: {totalSelectedFoodQty} টি খাবার
+                  </span>
+                  <span className="text-base font-black text-slate-900 dark:text-white">
+                    সর্বমোট: ৳ {selectedFoodTotalAllDates.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasConfirmedFoodMenu(true);
+                    setIsFoodMenuModalOpen(false);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 font-black text-sm shadow-md cursor-pointer transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================== */}
+      {/* MODAL 7: Selected Foods Summary Modal                          */}
+      {/* ============================================================== */}
+      <AnimatePresence>
+        {isSelectedFoodsModalOpen && (
+          <div className="fixed inset-0 z-[106] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSelectedFoodsModalOpen(false)}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              className="relative z-10 w-full max-w-lg rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 shadow-2xl my-auto flex flex-col max-h-[85dvh]"
+            >
+              <div className="px-5 py-4 border-b border-slate-200 dark:border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                      সিলেক্ট করা খাবারের তালিকা
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      মোট {totalSelectedFoodQty} টি আইটেম • সর্বমোট ৳ {selectedFoodTotalAllDates.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectedFoodsModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Calendar Date Switcher (< Date >) - Only Selected Dates */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200 dark:border-[#69EBDA]/30">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllDaysInSummary(false);
+                      handleStepFoodDate(-1);
+                    }}
+                    disabled={!showAllDaysInSummary && activeFoodDateIndex <= 0}
+                    className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
+                    title="আগের তারিখ"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="text-center flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                      {showAllDaysInSummary
+                        ? `সকল দিন (${availableFoodDates.length} দিন)`
+                        : `Day ${activeFoodDateIndex + 1} • ${toDisplayDate(activeFoodDate)}`}
+                    </span>
+                    {availableFoodDates.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllDaysInSummary((v) => !v)}
+                        className="px-2 py-0.5 rounded-lg bg-teal-500/15 text-[10px] font-extrabold text-teal-700 dark:text-[#69EBDA] cursor-pointer hover:bg-teal-500/25"
+                      >
+                        {showAllDaysInSummary ? 'একটি দিন' : 'সব দিন'}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllDaysInSummary(false);
+                      handleStepFoodDate(1);
+                    }}
+                    disabled={!showAllDaysInSummary && activeFoodDateIndex >= availableFoodDates.length - 1}
+                    className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
+                    title="পরের তারিখ"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Horizontal Scrollable Guest Switcher */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {restaurantGuestNumbers.map((gNum) => {
+                    const isSelected = activeFoodGuest === gNum;
+                    const gCount = availableFoodDates.reduce((total, dStr) => {
+                      const map = (selectedFoodByDateGuest[dStr] && selectedFoodByDateGuest[dStr][gNum]) || {};
+                      return total + Object.values(map).reduce((s, it) => s + (it?.qty || 0), 0);
+                    }, 0);
+                    return (
+                      <button
+                        key={gNum}
+                        type="button"
+                        onClick={() => setActiveFoodGuest(gNum)}
+                        className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-slate-900 dark:bg-[#69EBDA] text-[#69EBDA] dark:text-slate-950 border-slate-900 dark:border-[#69EBDA] shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 hover:border-[#69EBDA]/60'
+                        }`}
+                      >
+                        <span>Guest {gNum}</span>
+                        {gCount > 0 && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                              isSelected
+                                ? 'bg-[#69EBDA]/20 dark:bg-slate-950/20'
+                                : 'bg-teal-500/20 text-teal-700 dark:text-[#69EBDA]'
+                            }`}
+                          >
+                            {gCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+                {(() => {
+                  const guestDayGroups = availableFoodDates
+                    .map((dStr, dIdx) => {
+                      const guestMap = (selectedFoodByDateGuest[dStr] && selectedFoodByDateGuest[dStr][activeFoodGuest]) || {};
+                      const items = Object.values(guestMap).filter((it) => it && it.qty > 0);
+                      return { dStr, dayNumber: dIdx + 1, items };
+                    })
+                    .filter((g) => g.items.length > 0 && (showAllDaysInSummary || g.dStr === activeFoodDate));
+
+                  if (guestDayGroups.length === 0) {
+                    return (
+                      <div className="py-8 text-center space-y-2">
+                        <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                          Guest {activeFoodGuest}-এর জন্য এখনো কোনো খাবার সিলেক্ট করা হয়নি।
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          উপরে অন্য গেস্ট ট্যাবে ক্লিক করুন অথবা "আরও খাবার যোগ করুন" বাটনে ক্লিক করুন।
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const guestAllDaysTotal = guestDayGroups.reduce(
+                    (sum, grp) => sum + grp.items.reduce((s, it) => s + it.price * it.qty, 0),
+                    0
+                  );
+
+                  return (
+                    <>
+                      {guestDayGroups.map((grp) => {
+                        const daySubtotal = grp.items.reduce((s, it) => s + it.price * it.qty, 0);
+                        return (
+                          <div key={grp.dStr} className="space-y-2">
+                            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-teal-500/10 dark:bg-[#69EBDA]/15 border border-teal-500/20">
+                              <span className="text-xs font-black text-teal-800 dark:text-[#69EBDA]">
+                                Day {grp.dayNumber} • {toDisplayDate(grp.dStr)}
+                              </span>
+                              <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
+                                ৳ {daySubtotal.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+
+                            {grp.items.map((item) => {
+                              const mealLabel =
+                                item.meal === 'breakfast' ? 'সকাল' : item.meal === 'lunch' ? 'দুপুর' : 'রাত';
+                              return (
+                                <div
+                                  key={`${grp.dStr}-${item.key}`}
+                                  className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/10"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <img
+                                      src={item.photo}
+                                      alt={item.name}
+                                      onClick={() => setPreviewFoodItem(item)}
+                                      title="বড় করে দেখতে ক্লিক করুন"
+                                      className="w-12 h-12 rounded-xl object-cover shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                                    />
+                                    <div className="min-w-0">
+                                      <span className="inline-block px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-[#69EBDA] text-[10px] font-bold mb-0.5">
+                                        {mealLabel}
+                                      </span>
+                                      <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                                        {item.name}
+                                      </h4>
+                                      <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        ৳ {item.price.toLocaleString('en-IN')} × {item.qty} ={' '}
+                                        <span className="text-teal-700 dark:text-[#69EBDA] font-black">
+                                          ৳ {(item.price * item.qty).toLocaleString('en-IN')}
+                                        </span>
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateFoodQty(item.key, -1, activeFoodGuest, grp.dStr)}
+                                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 font-black text-xs cursor-pointer"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="w-5 text-center text-xs font-black text-slate-900 dark:text-white">
+                                      {item.qty}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateFoodQty(item.key, 1, activeFoodGuest, grp.dStr)}
+                                      className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 font-black text-xs cursor-pointer"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+
+                      <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                        <span>Guest {activeFoodGuest} মোট ({guestDayGroups.length} দিন):</span>
+                        <span className="text-teal-700 dark:text-[#69EBDA]">
+                          ৳ {guestAllDaysTotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="px-5 py-3.5 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectedFoodsModalOpen(false);
+                    setIsFoodMenuModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold cursor-pointer"
+                >
+                  আরও খাবার যোগ করুন
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSelectedFoodsModalOpen(false)}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 text-xs font-black cursor-pointer"
+                >
+                  ঠিক আছে
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================== */}
+      {/* MODAL 8: Large Food Photo Preview Modal                        */}
+      {/* ============================================================== */}
+      <AnimatePresence>
+        {previewFoodItem && (
+          <div className="fixed inset-0 z-[115] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewFoodItem(null)}
+              className="fixed inset-0 bg-slate-950/85 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 12 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              className="relative z-10 w-full max-w-lg rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewFoodItem(null)}
+                className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="w-full h-72 sm:h-96 bg-slate-950">
+                <img
+                  src={previewFoodItem.photo}
+                  alt={previewFoodItem.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4 sm:p-5 flex items-center justify-between gap-3 bg-white dark:bg-slate-900">
+                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                  {previewFoodItem.name}
+                </h4>
+                <span className="text-base sm:text-lg font-black text-teal-700 dark:text-[#69EBDA] shrink-0">
+                  ৳ {Number(previewFoodItem.price || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
             </motion.div>
           </div>
         )}

@@ -36,6 +36,8 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
   const [allTransports, setAllTransports] = useState(() => StorageService.getTransports());
   const [allRestaurants, setAllRestaurants] = useState(() => StorageService.getRestaurants());
   const [packageCategories, setPackageCategories] = useState(() => StorageService.getPackageCategories());
+  const [allReviews, setAllReviews] = useState(() => StorageService.getReviews());
+  const [allBookings, setAllBookings] = useState(() => StorageService.getBookings());
   const [cycleSeed, setCycleSeed] = useState(0);
 
   // Multi-tab Hero Search Widget State (3 Services: Hotels, Transport, Restaurant)
@@ -83,6 +85,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
   const destRef = useRef(null);
   const dateRef = useRef(null);
   const guestsRef = useRef(null);
+  const searchBarRef = useRef(null);
 
   // Build Hero Banner slides dynamically: 1 random package's default first photo per destination
   const slides = React.useMemo(() => {
@@ -142,6 +145,8 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
     const handleTransportsUpdate = () => setAllTransports(StorageService.getTransports());
     const handleRestaurantsUpdate = () => setAllRestaurants(StorageService.getRestaurants());
     const handleCategoriesUpdate = () => setPackageCategories(StorageService.getPackageCategories());
+    const handleReviewsUpdate = () => setAllReviews(StorageService.getReviews());
+    const handleBookingsUpdate = () => setAllBookings(StorageService.getBookings());
 
     window.addEventListener('app:hero-banner-updated', handleUpdate);
     window.addEventListener('app:destinations-updated', handleDestinationsUpdate);
@@ -150,6 +155,8 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
     window.addEventListener('app:transports-updated', handleTransportsUpdate);
     window.addEventListener('app:restaurants-updated', handleRestaurantsUpdate);
     window.addEventListener('app:categories-updated', handleCategoriesUpdate);
+    window.addEventListener('app:reviews-updated', handleReviewsUpdate);
+    window.addEventListener('app:bookings-updated', handleBookingsUpdate);
 
     let channel = null;
     if (supabase) {
@@ -177,6 +184,8 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
       window.removeEventListener('app:transports-updated', handleTransportsUpdate);
       window.removeEventListener('app:restaurants-updated', handleRestaurantsUpdate);
       window.removeEventListener('app:categories-updated', handleCategoriesUpdate);
+      window.removeEventListener('app:reviews-updated', handleReviewsUpdate);
+      window.removeEventListener('app:bookings-updated', handleBookingsUpdate);
       if (channel && supabase) {
         supabase.removeChannel(channel);
       }
@@ -222,7 +231,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
     };
   }, []);
 
-  // Click outside listener to safely close pop-up boxes
+  // Click outside, touch outside, or scroll listener to safely close pop-up boxes
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (destRef.current && !destRef.current.contains(e.target)) {
@@ -234,9 +243,38 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
       if (guestsRef.current && !guestsRef.current.contains(e.target)) {
         setShowGuestsDropdown(false);
       }
+      if (searchBarRef.current && !searchBarRef.current.contains(e.target)) {
+        setActivePopover(null);
+      }
+    };
+    const handleScrollOutside = (e) => {
+      const target = e.target;
+      const insideSearchBar =
+        searchBarRef.current &&
+        target instanceof Node &&
+        searchBarRef.current.contains(target);
+      if (!insideSearchBar) {
+        setActivePopover(null);
+      }
+      if (
+        (destRef.current && destRef.current.contains(target)) ||
+        (dateRef.current && dateRef.current.contains(target)) ||
+        (guestsRef.current && guestsRef.current.contains(target))
+      ) {
+        return;
+      }
+      setShowDestDropdown(false);
+      setShowDateDropdown(false);
+      setShowGuestsDropdown(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    window.addEventListener('scroll', handleScrollOutside, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOutside, { capture: true });
+    };
   }, []);
 
   // Global popup listener: auto-close hero popups when another popup is triggered anywhere
@@ -707,6 +745,10 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                     key={tab.id}
                     type="button"
                     onClick={() => {
+                      if (!StorageService.isServiceEnabled(tab.id)) {
+                        StorageService.notifyDisabledService(tab.id);
+                        return;
+                      }
                       setActiveSearchTab(tab.id);
                       setActivePopover(null);
                     }}
@@ -773,7 +815,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
           </div>
 
           {/* 3. Bottom Structured Input Boxes & Square #69EBDA Search Button */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          <div ref={searchBarRef} className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
 
             {/* TRANSPORT TAB INPUTS */}
             {activeSearchTab === 'transport' && (
@@ -1352,48 +1394,75 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
             </motion.button>
           </div>
 
-          {/* Bottom Row inside CARD 2: Consolidated Trust Highlights */}
-          <div className="mt-5 pt-4 border-t border-white/15 dark:border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-center sm:text-left transition-colors">
-            <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="p-2 rounded-xl bg-teal-600/20 border border-teal-600/30 text-teal-800 dark:text-[#69EBDA]">
-                <Star className="w-4 h-4 fill-teal-700 dark:fill-[#69EBDA]" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-extrabold text-white">৪.৯৮ / ৫.০</div>
-                <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">৩,৪০০+ ভেরিফাইড রিভিউ</div>
-              </div>
-            </div>
+          {/* Bottom Row inside CARD 2: Consolidated Realtime Trust Highlights */}
+          {(() => {
+            const reviewCount = allReviews.length;
+            const avgRating = reviewCount > 0
+              ? (allReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / reviewCount).toFixed(2)
+              : '0.00';
+            const totalServices = allHotels.length + allTransports.length + allRestaurants.length + allPackages.length;
+            const bookingCount = allBookings.length;
 
-            <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="p-2 rounded-xl bg-cyan-600/20 border border-cyan-600/30 text-cyan-800 dark:text-cyan-300">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-extrabold text-white">১০০% ভেরিফাইড</div>
-                <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">সম্পূর্ণ ট্রিপ সুরক্ষা</div>
-              </div>
-            </div>
+            return (
+              <div className="mt-5 pt-4 border-t border-white/15 dark:border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-center sm:text-left transition-colors">
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <div className="p-2 rounded-xl bg-teal-600/20 border border-teal-600/30 text-teal-800 dark:text-[#69EBDA]">
+                    <Star className="w-4 h-4 fill-teal-700 dark:fill-[#69EBDA]" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold text-white">
+                      {reviewCount > 0 ? `${avgRating} / 5.0` : '0.0 / 5.0'}
+                    </div>
+                    <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
+                      {reviewCount > 0 ? `${reviewCount} টি ভেরিফাইড রিভিউ` : 'এখনো কোনো রিভিউ নেই'}
+                    </div>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="p-2 rounded-xl bg-violet-600/20 border border-violet-600/30 text-violet-800 dark:text-violet-300">
-                <Compass className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-extrabold text-white">৭৫+ গন্তব্য</div>
-                <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">বিশেষজ্ঞ বাছাইকৃত রুট</div>
-              </div>
-            </div>
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <div className="p-2 rounded-xl bg-cyan-600/20 border border-cyan-600/30 text-cyan-800 dark:text-cyan-300">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold text-white">
+                      {bookingCount} টি বুকিং
+                    </div>
+                    <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
+                      {totalServices} টি ভেরিফাইড সার্ভিস
+                    </div>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="p-2 rounded-xl bg-emerald-600/20 border border-emerald-600/30 text-emerald-800 dark:text-emerald-300">
-                <Sparkles className="w-4 h-4" />
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <div className="p-2 rounded-xl bg-violet-600/20 border border-violet-600/30 text-violet-800 dark:text-violet-300">
+                    <Compass className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold text-white">
+                      {destinations.length} টি গন্তব্য
+                    </div>
+                    <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
+                      {allPackages.length} টি ট্যুর ও {allTransports.length} টি রুট
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <div className="p-2 rounded-xl bg-emerald-600/20 border border-emerald-600/30 text-emerald-800 dark:text-emerald-300">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-extrabold text-white">
+                      {allHotels.length + allRestaurants.length} টি প্রপার্টি
+                    </div>
+                    <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
+                      {allHotels.length} হোটেল • {allRestaurants.length} রেস্টুরেন্ট
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-left">
-                <div className="text-sm font-extrabold text-white">কার্বন নিউট্রাল</div>
-                <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">পরিবেশবান্ধব অঙ্গীকার</div>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
         </div>
 

@@ -23,6 +23,7 @@ import { normalizeTransportToCardShape } from '../utils/serviceCardNormalizer';
 export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onBack, onOpenBookCall, onSelectHotel }) => {
   const [categories, setCategories] = useState(() => StorageService.getTransportCategories());
   const [transports, setTransports] = useState(() => StorageService.getTransports());
+  const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
   const [activeCatId, setActiveCatId] = useState(categoryId || 'all');
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
 
@@ -38,12 +39,15 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
     const handleSync = () => {
       setCategories(StorageService.getTransportCategories());
       setTransports(StorageService.getTransports());
+      setServicesControl(StorageService.getServicesControl());
     };
     window.addEventListener('app:transports-updated', handleSync);
     window.addEventListener('app:transport-categories-updated', handleSync);
+    window.addEventListener('app:services-control-updated', handleSync);
     return () => {
       window.removeEventListener('app:transports-updated', handleSync);
       window.removeEventListener('app:transport-categories-updated', handleSync);
+      window.removeEventListener('app:services-control-updated', handleSync);
     };
   }, []);
 
@@ -71,6 +75,9 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
   const filteredTransports = useMemo(() => {
     const tokens = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return transports.filter((t) => {
+      if (servicesControl?.transport === false || servicesControl?.[t.category] === false) {
+        return false;
+      }
       const matchCat = activeCatId === 'all' || t.category === activeCatId;
       if (tokens.length === 0) return matchCat;
       const routesStr = Array.isArray(t.routeFares)
@@ -80,7 +87,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
       const matchSearch = tokens.some((tok) => hay.includes(tok));
       return matchCat && matchSearch;
     });
-  }, [transports, activeCatId, searchQuery]);
+  }, [transports, activeCatId, searchQuery, servicesControl]);
 
   const getCategoryIcon = (catIdOrIcon) => {
     if (catIdOrIcon === 'waterway' || catIdOrIcon === 'Ship') {
@@ -166,17 +173,24 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <span>সকল বাহন ({transports.length})</span>
+              <span>সকল বাহন ({transports.filter((t) => servicesControl?.transport !== false && servicesControl?.[t.category] !== false).length})</span>
             </button>
 
             {categories.map((cat) => {
               const isSelected = activeCatId === cat.id;
-              const count = transports.filter((t) => t.category === cat.id).length;
+              const isCatDisabled = servicesControl?.transport === false || servicesControl?.[cat.id] === false;
+              const count = isCatDisabled ? 'Off' : transports.filter((t) => t.category === cat.id).length;
               return (
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setActiveCatId(cat.id)}
+                  onClick={() => {
+                    if (isCatDisabled) {
+                      StorageService.notifyDisabledService(cat.id);
+                      return;
+                    }
+                    setActiveCatId(cat.id);
+                  }}
                   className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                     isSelected
                       ? 'bg-gradient-to-r from-[#69EBDA] via-[#2dd4bf] to-cyan-400 text-slate-950 shadow-md font-black'

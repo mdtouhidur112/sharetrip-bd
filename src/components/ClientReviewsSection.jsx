@@ -26,12 +26,21 @@ export const ClientReviewsSection = () => {
     return () => window.removeEventListener('app:reviews-updated', handleUpdate);
   }, []);
 
+  if (!Array.isArray(reviewsList) || reviewsList.length === 0) {
+    return null;
+  }
+
+  const dynamicTrips = Array.from(
+    new Set(
+      reviewsList
+        .map((rev) => (rev.trip || rev.location || '').trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 5);
+
   const categories = [
     { id: 'all', label: 'সব রিভিউ' },
-    { id: 'বালি', label: 'বালি ট্যুর' },
-    { id: 'আমালফি', label: 'আমালফি ট্যুর' },
-    { id: 'সুইস', label: 'সুইস আল্পস' },
-    { id: 'কিয়োটো', label: 'কিয়োটো ট্যুর' },
+    ...dynamicTrips.map((t) => ({ id: t, label: t }))
   ];
 
   const filteredReviews = reviewsList.filter(rev => {
@@ -106,7 +115,7 @@ export const ClientReviewsSection = () => {
           <p className="text-slate-300 dark:text-slate-400 text-xs mt-1">অতিথিদের বাস্তব অভিজ্ঞতা যুক্ত হলে তা এখানে প্রদর্শিত হবে।</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start relative z-10">
           {filteredReviews.map((review) => (
           <motion.div
             key={review.id}

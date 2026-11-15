@@ -38,7 +38,7 @@ export const HowItWorksSection = ({ onExploreTours }) => {
       </div>
 
       {/* 3-Step Glass Bento Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+      <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start relative z-10">
         {HOW_IT_WORKS_STEPS.map((item, idx) => (
           <motion.div
             key={item.step}
