@@ -24,7 +24,7 @@ import { StorageService } from '../services/storageService';
 const SPRING = { type: 'spring', stiffness: 380, damping: 30 };
 
 const parseNum = (val) => Number(String(val || 0).replace(/[^0-9.-]/g, '')) || 0;
-const formatBDT = (amount) => `৳ ${Number(amount || 0).toLocaleString('en-IN')}`;
+const formatBDT = (amount) => `BDT ${Number(amount || 0).toLocaleString('en-IN')}`;
 
 const escapeHtml = (val) =>
   String(val ?? '')
@@ -90,11 +90,33 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
   const handleCancelOrder = async (bk) => {
     const statusLower = (bk.status || 'Pending').toLowerCase();
     if (['confirmed', 'ongoing', 'completed', 'cancelled'].includes(statusLower)) return;
-    if (!window.confirm('আপনি কি নিশ্চিত যে এই অর্ডারটি ক্যানসেল করতে চান?')) return;
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
     setBusyId(bk.id);
     try {
       await StorageService.updateBookingStatus(bk.id, 'Cancelled');
-      onShowToast?.('অর্ডার সফলভাবে ক্যানসেল করা হয়েছে।');
+      await StorageService.logBookingAudit({
+        bookingId: bk.id,
+        actionType: 'customer_cancelled',
+        previousStatus: bk.status || 'Pending',
+        newStatus: 'Cancelled',
+        actorRole: 'customer',
+        actorName: bk.customerName || bk.fullName || 'Customer',
+        actorEmail: bk.customerEmail || bk.email || '',
+        actorPhone: bk.customerPhone || bk.phone || '',
+        customerName: bk.customerName || bk.fullName || 'Customer',
+        customerEmail: bk.customerEmail || bk.email || '',
+        customerPhone: bk.customerPhone || bk.phone || '',
+        customerWhatsapp: bk.customerWhatsapp || bk.whatsapp || bk.customerPhone || bk.phone || '',
+        itemTitle: bk.itemTitle || bk.hotelName || bk.packageTitle || 'Travel Booking',
+        totalPrice: Number(bk.totalPrice || 0),
+        details: {
+          checkInDate: bk.checkInDate || bk.travelDate || '',
+          checkOutDate: bk.checkOutDate || '',
+          serviceType: bk.serviceType || '',
+          guests: bk.guests || ''
+        }
+      });
+      onShowToast?.('Order has been cancelled successfully.');
     } finally {
       setBusyId(null);
     }
@@ -103,11 +125,11 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
   const handleDeleteHistory = async (bk) => {
     const statusLower = (bk.status || 'Pending').toLowerCase();
     if (['confirmed', 'ongoing'].includes(statusLower)) return;
-    if (!window.confirm('আপনি কি এই অর্ডার হিস্ট্রি ডিলিট করতে চান?')) return;
+    if (!window.confirm('Are you sure you want to delete this order history?')) return;
     setBusyId(bk.id);
     try {
       await StorageService.deleteBooking(bk);
-      onShowToast?.('অর্ডার হিস্ট্রি ডিলিট করা হয়েছে।');
+      onShowToast?.('Order history has been deleted.');
     } finally {
       setBusyId(null);
     }
@@ -139,7 +161,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
               : 'Hotel & Resort';
 
       const brandName = branding?.brandName || 'SHARE TRIP BD';
-      const brandLogoUrl = branding?.logoUrl || '';
+      const brandLogoUrl = branding?.logoUrl || '/stb-logo.png';
       const socialLinks = StorageService.getSocialLinks() || {};
       const footerSocials = StorageService.getFooterSettings()?.socialLinks || [];
       const activeSocials = footerSocials.length > 0
@@ -270,7 +292,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
               </td>
               <td style="padding:12px; color:#334155;">${col2Body}</td>
               <td style="padding:12px; color:#334155;">${col3Body}</td>
-              <td style="padding:12px; text-align:right; font-weight:800; color:#0f172a;">৳ ${subtotalAmount.toLocaleString('en-IN')}</td>
+              <td style="padding:12px; text-align:right; font-weight:800; color:#0f172a;">BDT ${subtotalAmount.toLocaleString('en-IN')}</td>
             </tr>
           </tbody>
         </table>
@@ -279,27 +301,27 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
           <div style="width:320px; padding:14px 16px; border-radius:12px; background:#f8fafc; border:1px solid #cbd5e1; font-size:12px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
               <span style="color:#475569;">Subtotal</span>
-              <span style="font-weight:700; color:#0f172a;">৳ ${subtotalAmount.toLocaleString('en-IN')}</span>
+              <span style="font-weight:700; color:#0f172a;">BDT ${subtotalAmount.toLocaleString('en-IN')}</span>
             </div>
             ${
               vatTaxAmount > 0
                 ? `<div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                      <span style="color:#475569;">VAT & Tax ${vatPct > 0 ? `(${vatPct}%)` : ''}</span>
-                     <span style="font-weight:700; color:#0f172a;">+ ৳ ${vatTaxAmount.toLocaleString('en-IN')}</span>
+                     <span style="font-weight:700; color:#0f172a;">+ BDT ${vatTaxAmount.toLocaleString('en-IN')}</span>
                    </div>`
                 : ''
             }
             <div style="display:flex; justify-content:space-between; margin-bottom:6px; padding-top:4px; border-top:1px dashed #cbd5e1;">
               <span style="color:#0f172a; font-weight:800;">Total Amount</span>
-              <span style="font-weight:900; color:#0f172a;">৳ ${tot.toLocaleString('en-IN')}</span>
+              <span style="font-weight:900; color:#0f172a;">BDT ${tot.toLocaleString('en-IN')}</span>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
               <span style="color:#059669;">Advance Paid (${escapeHtml(bk.paymentMethod || 'Cash')})</span>
-              <span style="font-weight:800; color:#059669;">৳ ${adv.toLocaleString('en-IN')}</span>
+              <span style="font-weight:800; color:#059669;">BDT ${adv.toLocaleString('en-IN')}</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid #cbd5e1; font-size:14px;">
               <span style="font-weight:900; color:#0f172a;">Due Balance</span>
-              <span style="font-weight:900; color:${due > 0 ? '#e11d48' : '#059669'};">৳ ${due.toLocaleString('en-IN')}</span>
+              <span style="font-weight:900; color:${due > 0 ? '#e11d48' : '#059669'};">BDT ${due.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
@@ -336,10 +358,10 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
       pdf.save(`Invoice-${bk.id}.pdf`);
-      onShowToast?.('ইনভয়েস PDF ডাউনলোড হয়েছে!');
+      onShowToast?.('Invoice PDF downloaded successfully!');
     } catch (err) {
       console.error('Invoice PDF error:', err);
-      onShowToast?.('ইনভয়েস PDF তৈরি করতে সমস্যা হয়েছে।');
+      onShowToast?.('Failed to generate invoice PDF.');
     } finally {
       if (container && container.parentNode) container.parentNode.removeChild(container);
       setDownloadingId(null);
@@ -359,12 +381,12 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#5C6977]/95 dark:bg-slate-900/90 backdrop-blur-xl border border-[#69EBDA]/40 text-white text-xs sm:text-sm font-bold shadow-md hover:border-[#69EBDA] cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-[#69EBDA]" />
-          <span>হোমে ফিরে যান</span>
+          <span>Back to Home</span>
         </motion.button>
 
         <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#5C6977]/90 dark:bg-slate-900/80 border border-[#69EBDA]/30 text-white text-xs font-bold">
           <Briefcase className="w-4 h-4 text-[#69EBDA]" />
-          <span>মোট অর্ডার: {userBookings.length}</span>
+          <span>Total Orders: {userBookings.length}</span>
         </div>
       </div>
 
@@ -376,7 +398,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
               My Bookings & Order History
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 mt-1">
-              আপনার সকল বুকিং হিস্ট্রি দেখুন, পেন্ডিং অর্ডার ক্যানসেল করুন এবং যেকোনো অর্ডারের প্রফেশনাল PDF ইনভয়েস ডাউনলোড করুন।
+              View your complete booking history, cancel pending orders, and download professional PDF invoices.
             </p>
           </div>
 
@@ -386,7 +408,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="অর্ডার আইডি বা সার্ভিস খুঁজুন..."
+              placeholder="Search order ID or service..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/45 border border-white/15 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#69EBDA]"
             />
           </div>
@@ -414,13 +436,13 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
       {/* Orders List */}
       {!user ? (
         <div className="rounded-3xl bg-[#5C6977]/95 dark:bg-slate-900/85 border border-[#69EBDA]/30 p-10 text-center text-white">
-          <p className="text-sm font-bold">আপনার বুকিং হিস্ট্রি দেখতে অনুগ্রহ করে সাইন ইন করুন।</p>
+          <p className="text-sm font-bold">Please sign in to view your booking history.</p>
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="rounded-3xl bg-[#5C6977]/95 dark:bg-slate-900/85 border border-[#69EBDA]/30 p-12 text-center text-white space-y-2">
           <Briefcase className="w-10 h-10 text-[#69EBDA] mx-auto opacity-80" />
-          <h3 className="text-base font-extrabold">কোনো অর্ডার বা বুকিং পাওয়া যায়নি</h3>
-          <p className="text-xs text-slate-300">নতুন হোটেল, প্যাকেজ বা ট্রান্সপোর্ট বুক করলে এখানে দেখা যাবে।</p>
+          <h3 className="text-base font-extrabold">No orders or bookings found</h3>
+          <p className="text-xs text-slate-300">New hotel, package, or transport bookings will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -506,17 +528,17 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
                     {isConfirmedLocked ? (
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-400/30 px-3 py-1.5 rounded-xl">
                         <Lock className="w-3.5 h-3.5" />
-                        <span>অ্যাডমিন কনফার্ম করেছেন — ক্যানসেল ও ডিলিট লক করা আছে (Completed হলে ডিলিট করা যাবে)</span>
+                        <span>Confirmed by admin — cancel & delete are locked (deletable once Completed)</span>
                       </span>
                     ) : statusLower === 'completed' ? (
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-300">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>অর্ডার সম্পন্ন হয়েছে — চাইলে হিস্ট্রি ডিলিট করতে পারবেন</span>
+                        <span>Order completed — you can delete history if needed</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-300">
                         <Clock className="w-3.5 h-3.5 text-[#69EBDA]" />
-                        <span>কনফার্ম হওয়ার আগে অর্ডার ক্যানসেল বা ডিলিট করা যাবে</span>
+                        <span>Order can be cancelled or deleted before confirmation</span>
                       </span>
                     )}
                   </div>
@@ -559,7 +581,7 @@ export const MyBookingsPage = ({ user, onBack, onShowToast }) => {
                     ) : (
                       <span className="px-3.5 py-2 rounded-xl bg-slate-950/35 border border-white/10 text-slate-300 text-[11px] font-bold inline-flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5 text-amber-300" />
-                        <span>{statusLower === 'cancelled' ? 'অর্ডার ক্যানসেল হয়েছে' : 'কনফার্ম হলে Invoice PDF পাবেন'}</span>
+                        <span>{statusLower === 'cancelled' ? 'Order cancelled' : 'Invoice PDF available once confirmed'}</span>
                       </span>
                     )}
                   </div>

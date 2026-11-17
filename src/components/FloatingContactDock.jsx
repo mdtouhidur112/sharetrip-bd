@@ -23,14 +23,14 @@ export const InstantContactBar = ({ pkg, onOpenBookCall, onOpenInquiry }) => {
     return () => window.removeEventListener('app:contact-info-updated', sync);
   }, []);
 
-  const packageTitle = pkg ? (pkg.shortTitle || pkg.title) : 'বিলাসবহুল ভ্রমণ প্যাকেজ';
-  const packagePrice = pkg ? `$${pkg.price.toFixed(2)}/জন` : 'বিশেষ কাস্টমাইজড ট্যুর';
+  const packageTitle = pkg ? (pkg.shortTitle || pkg.title) : 'Luxury Travel Package';
+  const packagePrice = pkg ? `$${pkg.price.toFixed(2)}/person` : 'Special Customized Tour';
   const rawWa = (contactInfo?.whatsapp || '').replace(/[^0-9]/g, '');
 
   const handleWhatsAppClick = () => {
     if (!rawWa) return;
     const text = encodeURIComponent(
-      `হ্যালো এথেরিয়া ট্রাভেলস কনসিয়ার্জ! 🌟\n\nআমি "${packageTitle}" (${packagePrice}) প্যাকেজটি বুকিং করতে আগ্রহী।\n\nতারিখের প্রাপ্যতা এবং প্রাইভেট ভ্রমণ পরিকল্পনার বিস্তারিত জানাবেন কি?`
+      `Hello Etheria Travels Concierge! 🌟\n\nI am interested in booking the "${packageTitle}" (${packagePrice}) package.\n\nCould you please share details on date availability and private itinerary options?`
     );
     window.open(`https://wa.me/${rawWa}?text=${text}`, '_blank', 'noopener,noreferrer');
   };
@@ -53,14 +53,14 @@ export const InstantContactBar = ({ pkg, onOpenBookCall, onOpenInquiry }) => {
           hover:shadow-[0_6px_22px_rgba(16,185,129,0.3)]
           flex items-center gap-2 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0
         "
-        title="ট্রাভেল বিশেষজ্ঞের সাথে সরাসরি হোয়াটসঅ্যাপ"
+        title="Direct WhatsApp with Travel Specialist"
       >
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
         <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-        <span>হোয়াটসঅ্যাপ</span>
+        <span>WhatsApp</span>
         <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300/80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
       </button>
       )}
@@ -81,7 +81,7 @@ export const InstantContactBar = ({ pkg, onOpenBookCall, onOpenInquiry }) => {
         "
       >
         <PhoneCall className="w-4 h-4 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform" />
-        <span>কল বুক করুন</span>
+        <span>Book a Call</span>
         <ArrowUpRight className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-300/80 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
       </button>
 
@@ -101,7 +101,7 @@ export const InstantContactBar = ({ pkg, onOpenBookCall, onOpenInquiry }) => {
         "
       >
         <Send className="w-4 h-4 text-[#69EBDA] group-hover:scale-110 transition-transform" />
-        <span>কনসিয়ার্জের সাথে যোগাযোগ</span>
+        <span>Contact Concierge</span>
         <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
       </button>
 
@@ -122,14 +122,14 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
     return () => window.removeEventListener('app:contact-info-updated', sync);
   }, []);
 
-  const packageTitle = pkg ? (pkg.shortTitle || pkg.title) : 'বিলাসবহুল ভ্রমণ প্যাকেজ';
-  const packagePrice = pkg ? `$${pkg.price.toFixed(2)}/জন` : 'কাস্টম ভ্রমণ পরিকল্পনা';
+  const packageTitle = pkg ? (pkg.shortTitle || pkg.title) : 'Luxury Travel Package';
+  const packagePrice = pkg ? `$${pkg.price.toFixed(2)}/person` : 'Custom Travel Plan';
   const rawWa = (contactInfo?.whatsapp || '').replace(/[^0-9]/g, '');
 
   const handleWhatsAppClick = () => {
     if (!rawWa) return;
     const text = encodeURIComponent(
-      `হ্যালো এথেরিয়া ট্রাভেলস! 🌟 আমি "${packageTitle}" (${packagePrice}) সম্পর্কে জানতে আগ্রহী। অনুগ্রহ করে সর্বশেষ প্রাপ্যতা এবং ভিআইপি সুবিধাসমূহ শেয়ার করুন।`
+      `Hello Etheria Travels! 🌟 I am interested in "${packageTitle}" (${packagePrice}). Please share the latest availability and VIP amenities.`
     );
     window.open(`https://wa.me/${rawWa}?text=${text}`, '_blank', 'noopener,noreferrer');
   };
@@ -142,7 +142,7 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
         <div className="p-3 rounded-3xl bg-[#5C6977]/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-[#69EBDA]/40 dark:border-white/25 shadow-2xl flex flex-col gap-2.5 animate-in slide-in-from-bottom-3 fade-in duration-300 min-w-[210px]">
           
           <div className="px-2 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-200 dark:text-slate-400 border-b border-white/15 dark:border-white/10 pb-1.5 flex items-center justify-between">
-            <span>সরাসরি কনসিয়ার্জ</span>
+            <span>Direct Concierge</span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
@@ -156,7 +156,7 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
           >
             <span className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-emerald-300" />
-              <span>হোয়াটসঅ্যাপ চ্যাট</span>
+              <span>WhatsApp Chat</span>
             </span>
             <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -171,7 +171,7 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
           >
             <span className="flex items-center gap-2">
               <PhoneCall className="w-4 h-4 text-cyan-300" />
-              <span>পরামর্শকের কল বুক করুন</span>
+              <span>Book a Consultant Call</span>
             </span>
             <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -186,7 +186,7 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
           >
             <span className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#69EBDA]" />
-              <span>বুকিং ও অনুসন্ধান</span>
+              <span>Booking & Inquiry</span>
             </span>
             <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -207,7 +207,7 @@ export const FloatingContactDock = ({ pkg, onOpenBookCall, onOpenBookingModal })
             : 'bg-gradient-to-tr from-[#69EBDA] to-cyan-400 border-white/40 text-slate-950 shadow-md shadow-[#69EBDA]/40'
           }
         `}
-        aria-label="কনসিয়ার্জ যোগাযোগের অপশন খুলুন বা বন্ধ করুন"
+        aria-label="Open or close concierge contact options"
       >
         {isExpanded ? (
           <X className="w-5 h-5 text-[#0d9488] dark:text-[#69EBDA]" />

@@ -30,6 +30,7 @@ export const ServicesPage = ({
   const [transports, setTransports] = useState(() => StorageService.getTransports());
   const [restaurants, setRestaurants] = useState(() => StorageService.getRestaurants());
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().servicesPage);
 
   useEffect(() => {
     if (initialTab) {
@@ -46,12 +47,14 @@ export const ServicesPage = ({
     const syncTransports = () => setTransports(StorageService.getTransports());
     const syncRestaurants = () => setRestaurants(StorageService.getRestaurants());
     const syncServicesControl = () => setServicesControl(StorageService.getServicesControl());
+    const syncSection = () => setSecText(StorageService.getSectionSettings().servicesPage);
 
     window.addEventListener('app:hotels-updated', syncHotels);
     window.addEventListener('app:hotel-reviews-updated', syncHotels);
     window.addEventListener('app:transports-updated', syncTransports);
     window.addEventListener('app:restaurants-updated', syncRestaurants);
     window.addEventListener('app:services-control-updated', syncServicesControl);
+    window.addEventListener('app:section-settings-updated', syncSection);
 
     return () => {
       window.removeEventListener('app:hotels-updated', syncHotels);
@@ -59,6 +62,7 @@ export const ServicesPage = ({
       window.removeEventListener('app:transports-updated', syncTransports);
       window.removeEventListener('app:restaurants-updated', syncRestaurants);
       window.removeEventListener('app:services-control-updated', syncServicesControl);
+      window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
 
@@ -116,8 +120,8 @@ export const ServicesPage = ({
     {
       id: 'road',
       title: 'Road Services',
-      subtitleBn: 'সড়ক পথের সার্ভিস',
-      description: 'চাঁদের গাড়ি, প্রাইভেট কার, সিএনজি, মাইক্রোবাস ও ৪x৪ এসইউভি।',
+      subtitleBn: 'Roadway Services',
+      description: 'Chander Gari, private cars, CNG, microbuses & 4x4 SUVs.',
       count: servicesControl?.transport === false || servicesControl?.road === false ? 'Off' : transports.filter((t) => t.category === 'road').length,
       icon: Car,
       image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=900&q=80'
@@ -125,8 +129,8 @@ export const ServicesPage = ({
     {
       id: 'waterway',
       title: 'River Services',
-      subtitleBn: 'নদী পথের সার্ভিস',
-      description: 'লাক্সারি রিভার ক্রুজ, স্পিডবোট, ট্যুরিস্ট বোট ও প্রাইভেট ইয়ট।',
+      subtitleBn: 'Waterway Services',
+      description: 'Luxury river cruises, speedboats, tourist boats & private yachts.',
       count: servicesControl?.transport === false || servicesControl?.waterway === false ? 'Off' : transports.filter((t) => t.category === 'waterway').length,
       icon: Ship,
       image: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=900&q=80'
@@ -134,8 +138,8 @@ export const ServicesPage = ({
     {
       id: 'air',
       title: 'Air Services',
-      subtitleBn: 'আকাশ পথের সার্ভিস',
-      description: 'প্রতিটি এয়ারপোর্টের ফ্লাইট সময়, গন্তব্য থেকে গন্তব্য রুট ও চার্টার।',
+      subtitleBn: 'Airway Services',
+      description: 'Flight schedules for every airport, point-to-point routes & charters.',
       count: servicesControl?.transport === false || servicesControl?.air === false ? 'Off' : transports.filter((t) => t.category === 'air').length,
       icon: Plane,
       image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=80'
@@ -156,21 +160,27 @@ export const ServicesPage = ({
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 dark:bg-[#5C6977]/70 border border-white/50 dark:border-white/20 backdrop-blur-xl text-xs font-extrabold text-slate-900 dark:text-white hover:border-[#69EBDA] transition-all cursor-pointer mb-6 shadow-sm"
         >
           <ArrowLeft className="w-4 h-4 text-[#69EBDA]" />
-          <span>পেছনে ফিরে যান (Back)</span>
+          <span>Back</span>
         </button>
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-900 dark:text-[#69EBDA] uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              Interactive Services Explorer
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-              আমাদের প্রিমিয়াম সেবাসমূহ
-            </h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-700 dark:text-slate-300 font-medium max-w-2xl">
-              হোটেল, পরিবহন অথবা রেস্টুরেন্ট ডাইনিং—যেকোনো সেবা সিলেক্ট করুন এবং লাইভ প্রাপ্যতা ও মূল্য দেখে সরাসরি বুকিং করুন।
-            </p>
+            {secText?.badge && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-900 dark:text-[#69EBDA] uppercase">
+                <Sparkles className="w-3.5 h-3.5" />
+                {secText.badge}
+              </div>
+            )}
+            {secText?.title && (
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+                {secText.title}
+              </h1>
+            )}
+            {secText?.subtitle && (
+              <p className="mt-2 text-sm sm:text-base text-slate-700 dark:text-slate-300 font-medium max-w-2xl">
+                {secText.subtitle}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -251,14 +261,14 @@ export const ServicesPage = ({
           >
             {filteredHotels.length === 0 ? (
               <div className="col-span-full p-12 text-center rounded-3xl bg-[#5C6977]/80 dark:bg-slate-900/60 border border-white/20 text-white font-bold space-y-3">
-                <p>বর্তমানে কোনো হোটেল পাওয়া যায়নি।</p>
+                <p>No hotels found at this moment.</p>
                 {filterQuery && (
                   <button
                     type="button"
                     onClick={() => setFilterQuery('')}
                     className="px-4 py-1.5 rounded-full bg-[#69EBDA] text-slate-950 text-xs font-extrabold cursor-pointer"
                   >
-                    সব হোটেল দেখুন
+                    View All Hotels
                   </button>
                 )}
               </div>
@@ -307,7 +317,7 @@ export const ServicesPage = ({
                         <CatIcon className="w-5 h-5 text-[#69EBDA]" />
                       </div>
                       <span className="px-3 py-1 rounded-full bg-slate-950/75 border border-white/20 text-[11px] font-extrabold text-[#69EBDA]">
-                        {cat.count} টি সার্ভিস
+                        {cat.count} Services
                       </span>
                     </div>
 
@@ -322,7 +332,7 @@ export const ServicesPage = ({
                         {cat.description}
                       </p>
                       <div className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/15 group-hover:bg-[#69EBDA] text-white group-hover:text-slate-950 border border-white/25 group-hover:border-[#69EBDA] text-xs font-extrabold transition-all">
-                        <span>সকল যানবাহন দেখুন</span>
+                        <span>View All Vehicles</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       </div>
                     </div>
@@ -335,7 +345,7 @@ export const ServicesPage = ({
             <div className="max-w-7xl min-[1650px]:max-w-[2200px] mx-auto space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-                  সকল ট্রান্সপোর্ট সার্ভিস ({filteredTransports.length})
+                  All Transport Services ({filteredTransports.length})
                 </h2>
                 {filterQuery && (
                   <button
@@ -343,7 +353,7 @@ export const ServicesPage = ({
                     onClick={() => setFilterQuery('')}
                     className="px-3.5 py-1.5 rounded-full bg-[#69EBDA] text-slate-950 text-xs font-extrabold cursor-pointer"
                   >
-                    ফিল্টার সরান ({filterQuery})
+                    Clear filter ({filterQuery})
                   </button>
                 )}
               </div>
@@ -351,7 +361,7 @@ export const ServicesPage = ({
               <div className="grid grid-cols-1 lg:grid-cols-2 min-[1650px]:grid-cols-3 min-[2200px]:grid-cols-4 gap-5 sm:gap-6 lg:gap-8">
                 {filteredTransports.length === 0 ? (
                   <div className="col-span-full p-12 text-center rounded-3xl bg-[#5C6977]/80 dark:bg-slate-900/60 border border-white/20 text-white font-bold">
-                    বর্তমানে কোনো যানবাহন পাওয়া যায়নি।
+                    No vehicles found at this moment.
                   </div>
                 ) : (
                   filteredTransports.map((item) => {
@@ -381,14 +391,14 @@ export const ServicesPage = ({
           >
             {filteredRestaurants.length === 0 ? (
               <div className="col-span-full p-12 text-center rounded-3xl bg-[#5C6977]/80 dark:bg-slate-900/60 border border-white/20 text-white font-bold space-y-3">
-                <p>বর্তমানে কোনো রেস্টুরেন্ট বা ডাইনিং প্ল্যান পাওয়া যায়নি।</p>
+                <p>No restaurants or dining plans found at this moment.</p>
                 {filterQuery && (
                   <button
                     type="button"
                     onClick={() => setFilterQuery('')}
                     className="px-4 py-1.5 rounded-full bg-[#69EBDA] text-slate-950 text-xs font-extrabold cursor-pointer"
                   >
-                    সব রেস্টুরেন্ট দেখুন
+                    View All Restaurants
                   </button>
                 )}
               </div>

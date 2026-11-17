@@ -67,7 +67,7 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
           <div className="relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold mb-2 border border-teal-500/30">
               <Sparkles className="w-3.5 h-3.5" />
-              তাৎক্ষণিক বুকিং সংরক্ষণ
+              Instant Booking Reservation
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
               {pkg.shortTitle || pkg.title}
@@ -92,10 +92,10 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
               <Check className="w-8 h-8" />
             </div>
             <h3 className="text-2xl font-bold text-white font-['Outfit',sans-serif]">
-              ভ্রমণ প্যাকেজ সংরক্ষিত হয়েছে!
+              Travel Package Reserved!
             </h3>
             <p className="text-slate-300 text-sm max-w-sm mx-auto leading-relaxed">
-              আপনার ভ্রমণ প্যাকেজ সংরক্ষিত হয়েছে। আমাদের প্রাইভেট কনসিয়ার্জ আপনার ইমেইলে বিস্তারিত ভ্রমণ নির্দেশিকা ও ডিপোজিট লিংক পাঠিয়েছেন।
+              Your travel package has been reserved. Our private concierge has sent a detailed itinerary and deposit link to your email.
             </p>
           </div>
         ) : (
@@ -107,7 +107,7 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
               {/* Departure Date */}
               <div>
                 <label className="text-xs uppercase font-bold text-slate-300 tracking-wider block mb-1.5">
-                  ভ্রমণের তারিখ
+                  Departure Date
                 </label>
                 <div className="flex items-center gap-2 p-3 rounded-2xl bg-white/[0.05] border border-white/15">
                   <Calendar className="w-4 h-4 text-teal-400 shrink-0" />
@@ -124,12 +124,12 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
               {/* Number of Voyagers */}
               <div>
                 <label className="text-xs uppercase font-bold text-slate-300 tracking-wider block mb-1.5">
-                  ভ্রমণকারী সংখ্যা ({guestsCount})
+                  Number of Travelers ({guestsCount})
                 </label>
                 <div className="flex items-center justify-between p-2 rounded-2xl bg-white/[0.05] border border-white/15">
                   <div className="flex items-center gap-2 pl-2">
                     <Users className="w-4 h-4 text-teal-400" />
-                    <span className="text-xs text-white font-medium">{guestsCount} জন</span>
+                    <span className="text-xs text-white font-medium">{guestsCount} Guests</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -157,12 +157,12 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs uppercase font-bold text-slate-300 tracking-wider block mb-1.5">
-                  প্রধান ভ্রমণকারীর নাম
+                  Lead Traveler Name
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="যেমন: ফারহান চৌধুরী"
+                  placeholder="e.g. Farhan Chowdhury"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full p-3 rounded-2xl bg-white/[0.05] border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
@@ -171,7 +171,7 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
 
               <div>
                 <label className="text-xs uppercase font-bold text-slate-300 tracking-wider block mb-1.5">
-                  নিশ্চিতকরণের জন্য ইমেইল
+                  Email for Confirmation
                 </label>
                 <input
                   type="email"
@@ -194,25 +194,25 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
                   {vipAddon && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-white">ভিআইপি এয়ারপোর্ট ফাস্ট-ট্র্যাক ও হেলিকপ্টার ট্রান্সফার সুবিধা</div>
-                  <div className="text-[11px] text-slate-400">প্রাইভেট এয়ারপোর্ট লাউঞ্জ পাস ও বিলাসবহুল গাড়ি আপগ্রেড অন্তর্ভুক্ত</div>
+                  <div className="text-xs font-semibold text-white">VIP Airport Fast-Track & Helicopter Transfer</div>
+                  <div className="text-[11px] text-slate-400">Includes private airport lounge access & luxury vehicle upgrade</div>
                 </div>
               </div>
-              <span className="text-xs font-bold text-teal-300 shrink-0">+$১২০.০০</span>
+              <span className="text-xs font-bold text-teal-300 shrink-0">+$120.00</span>
             </div>
 
             {/* Price Breakdown Card */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500/15 via-cyan-500/10 to-transparent border border-white/20 flex items-center justify-between">
               <div>
-                <span className="text-xs text-slate-300 block">মোট প্যাকেজ খরচ</span>
+                <span className="text-xs text-slate-300 block">Total Package Cost</span>
                 <span className="text-3xl font-black text-white font-['Outfit',sans-serif]">
                   ${totalPrice}
                 </span>
-                <span className="text-[11px] text-teal-300 block">বিলাসবহুল হোটেল, পরিবহন ও সমস্ত পারমিট অন্তর্ভুক্ত</span>
+                <span className="text-[11px] text-teal-300 block">Includes luxury hotels, transport, and all permits</span>
               </div>
               <div className="text-right">
-                <span className="text-xs text-slate-400">${pkg.price} × {guestsCount} জন</span>
-                {vipAddon && <span className="text-xs text-teal-300 block">+ $১২০ ভিআইপি আপগ্রেড</span>}
+                <span className="text-xs text-slate-400">${pkg.price} × {guestsCount} guests</span>
+                {vipAddon && <span className="text-xs text-teal-300 block">+ $120 VIP Upgrade</span>}
               </div>
             </div>
 
@@ -233,12 +233,12 @@ export const BookingCheckoutModal = ({ pkg, isOpen, onClose, onBookingSuccess })
                 "
               >
                 <CreditCard className="w-4 h-4 text-slate-950" />
-                <span>{isSubmitting ? 'বুকিং নিশ্চিত করা হচ্ছে...' : 'বুকিং নিশ্চিত করুন'}</span>
+                <span>{isSubmitting ? 'Confirming booking...' : 'Confirm Booking'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <div className="mt-2 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>ভ্রমণের ১৪ দিন পূর্ব পর্যন্ত কোনো প্রকার বাতিলকরণ ফি নেই</span>
+                <span>Free cancellation up to 14 days before departure</span>
               </div>
             </div>
 

@@ -122,18 +122,18 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
   const getTabMeta = () => {
     if (activeTab === 'transport') {
       return {
-        label: `ট্রান্সপোর্ট (${filter.subOption || 'Road Services'})`,
+        label: `Transport (${filter.subOption || 'Road Services'})`,
         icon: <Car className="w-4 h-4 text-[#69EBDA]" />
       };
     }
     if (activeTab === 'restaurant') {
       return {
-        label: 'রেস্টুরেন্ট ও ডাইনিং',
+        label: 'Restaurant & Dining',
         icon: <UtensilsCrossed className="w-4 h-4 text-[#69EBDA]" />
       };
     }
     return {
-      label: 'হোটেল ও রিসোর্ট',
+      label: 'Hotel & Resort',
       icon: <Hotel className="w-4 h-4 text-[#69EBDA]" />
     };
   };
@@ -182,7 +182,7 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
           </div>
 
           <h2 className="text-lg sm:text-xl font-extrabold text-white">
-            আপনার ফিল্টার অনুযায়ী পাওয়া সার্ভিসসমূহ ({filteredItems.length} টি)
+            Services Found Matching Your Filter ({filteredItems.length})
           </h2>
         </div>
 
@@ -192,7 +192,7 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#69EBDA] text-slate-950 font-black text-xs sm:text-sm shadow-md hover:brightness-105 transition-all cursor-pointer shrink-0"
         >
           <RotateCcw className="w-4 h-4" />
-          <span>ফিল্টার রিসেট / সব সেকশন দেখুন</span>
+          <span>Reset Filter / View All Sections</span>
         </button>
       </div>
 
@@ -201,10 +201,10 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
         <div className="p-12 rounded-3xl bg-[#5C6977]/70 dark:bg-slate-900/75 backdrop-blur-2xl border border-white/20 text-center space-y-4">
           <SearchX className="w-10 h-10 text-[#69EBDA] mx-auto" />
           <h3 className="text-lg font-extrabold text-white">
-            আপনার ফিল্টার অনুযায়ী কোনো সার্ভিস পাওয়া যায়নি
+            No services found matching your filter
           </h3>
           <p className="text-xs sm:text-sm text-slate-200 max-w-md mx-auto">
-            অনুগ্রহ করে লোকেশন বা অন্যান্য তথ্য পরিবর্তন করে আবার চেষ্টা করুন, অথবা সব সেকশন দেখতে রিসেট করুন।
+            Please modify your location or details and try again, or reset to view all sections.
           </p>
           <button
             type="button"
@@ -212,7 +212,7 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#69EBDA] text-slate-950 font-black text-xs cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>সব সেকশন দেখুন</span>
+            <span>View All Sections</span>
           </button>
         </div>
       ) : activeTab === 'hotels' ? (
@@ -235,8 +235,8 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
               item.image ||
               'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80';
             const priceLabel = isTrans
-              ? item.fare || `৳ ${Number(item.bookingPrice || 0).toLocaleString('en-IN')}`
-              : item.rateLabel || `৳ ${Number(item.ratePerPerson || 0).toLocaleString('en-IN')} / জন`;
+              ? item.fare || `BDT ${Number(item.bookingPrice || 0).toLocaleString('en-IN')}`
+              : item.rateLabel || `BDT ${Number(item.ratePerPerson || 0).toLocaleString('en-IN')} / person`;
 
             return (
               <motion.div
@@ -287,7 +287,7 @@ export const HeroFilteredResults = ({ filter, onResetFilter, onSelectItem }) => 
                       {priceLabel}
                     </span>
                     <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#69EBDA]/15 text-teal-800 dark:text-[#69EBDA] text-xs font-extrabold group-hover:bg-[#69EBDA] group-hover:text-slate-950 transition-all">
-                      <span>বিস্তারিত</span>
+                      <span>Details</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
                     </span>
                   </div>

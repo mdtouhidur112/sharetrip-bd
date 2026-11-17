@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { LanguageSelector } from './LanguageSelector';
+import { SyncStatusBadge } from './SyncStatusBadge';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -87,13 +88,13 @@ export const Navbar = ({
   const mobileMenuRef = useRef(null);
 
   const themeOptions = [
-    { id: 'light', label: 'লাইট মোড', icon: Sun },
-    { id: 'dark', label: 'ডার্ক মোড', icon: Moon },
-    { id: 'system', label: 'সিস্টেম থিম', icon: Monitor },
+    { id: 'light', label: 'Light Mode', icon: Sun },
+    { id: 'dark', label: 'Dark Mode', icon: Moon },
+    { id: 'system', label: 'System Theme', icon: Monitor },
   ];
 
   const languageOptions = [
-    { code: 'bn', label: 'বাংলা', flag: '🇧🇩' },
+    { code: 'bn', label: 'Bengali', flag: '🇧🇩' },
     { code: 'en', label: 'English', flag: '🇬🇧' },
   ];
 
@@ -193,11 +194,11 @@ export const Navbar = ({
       <div className="flex items-center justify-between pb-1.5 sm:pb-2 border-b border-white/15">
         <span className="text-[11px] sm:text-xs font-extrabold text-white flex items-center gap-1.5 font-['Outfit',sans-serif]">
           <Settings className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#69EBDA]" />
-          <span>{language === 'en' ? 'Quick Preferences' : 'কুইক সেটিংস'}</span>
+          <span>Quick Preferences</span>
         </span>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[#69EBDA] tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-[#69EBDA]/15 border border-[#69EBDA]/30">
-            {language === 'en' ? 'Guest' : 'গেস্ট'}
+            Guest
           </span>
           {isMobile && (
             <button
@@ -217,7 +218,7 @@ export const Navbar = ({
         <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-200">
           <span className="flex items-center gap-1 sm:gap-1.5">
             <Palette className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#69EBDA]" />
-            <span>{language === 'en' ? 'Theme Mode' : 'থিম পরিবর্তন'}</span>
+            <span>Theme Mode</span>
           </span>
           <span className="text-[9px] sm:text-[10px] text-[#69EBDA] capitalize">
             {themeMode}
@@ -256,10 +257,10 @@ export const Navbar = ({
         <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-200">
           <span className="flex items-center gap-1 sm:gap-1.5">
             <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#69EBDA]" />
-            <span>{language === 'en' ? 'Language' : 'ভাষা পরিবর্তন'}</span>
+            <span>Language</span>
           </span>
           <span className="text-[9px] sm:text-[10px] text-[#69EBDA]">
-            {language === 'en' ? 'English' : 'বাংলা'}
+            {language === 'en' ? 'English' : 'Bengali'}
           </span>
         </div>
 
@@ -303,7 +304,7 @@ export const Navbar = ({
               <div className="text-[10px] sm:text-[11px] text-slate-200 font-mono truncate">{user.email || user.phone}</div>
               <div className="mt-1 inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-[#69EBDA]/25 text-[#69EBDA] text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-[#69EBDA]/40">
                 <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#69EBDA]" />
-                <span>{isUserAdmin ? '🛡️ নরমাল অ্যাডমিন' : (user.membership || 'VIP Voyager')}</span>
+                <span>{isUserAdmin ? '🛡️ Standard Admin' : (user.membership || 'VIP Voyager')}</span>
               </div>
             </div>
 
@@ -335,7 +336,7 @@ export const Navbar = ({
           >
             <span className="flex items-center gap-2">
               <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#69EBDA]" />
-              <span>{t('my_bookings', 'আমার বুকিং ও অনুসন্ধান')}</span>
+              <span>{t('my_bookings', 'My Bookings & Inquiries')}</span>
             </span>
             <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-300" />
           </button>
@@ -349,7 +350,7 @@ export const Navbar = ({
           >
             <span className="flex items-center gap-2">
               <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 fill-rose-400/30" />
-              <span>{t('wishlist', 'পছন্দের প্যাকেজসমূহ')}</span>
+              <span>{t('wishlist', 'Saved Packages')}</span>
             </span>
             <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-300 text-[9px] sm:text-[10px] font-bold">
               {wishlist.length}
@@ -365,7 +366,7 @@ export const Navbar = ({
           >
             <span className="flex items-center gap-2">
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#69EBDA]" />
-              <span>{t('account_settings', 'অ্যাকাউন্ট সেটিংস')}</span>
+              <span>{t('account_settings', 'Account Settings')}</span>
             </span>
             <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-300" />
           </button>
@@ -375,13 +376,13 @@ export const Navbar = ({
             <button
               onClick={() => {
                 setProfileDropdownOpen(false);
-                onOpenAdmin();
+                onOpenAdmin('profile');
               }}
               className="w-full flex items-center justify-between px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-[#69EBDA]/25 to-teal-400/20 text-[#69EBDA] hover:from-[#69EBDA]/35 hover:to-teal-400/30 border border-[#69EBDA]/40 shadow-xs"
             >
               <span className="flex items-center gap-2">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#69EBDA]" />
-                <span>অ্যাডমিন প্যানেল এক্সেস</span>
+                <span>Admin Panel Access</span>
               </span>
               <span className="text-[9px] sm:text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-full bg-[#69EBDA] text-slate-950 shadow-sm">
                 Admin Access
@@ -400,7 +401,7 @@ export const Navbar = ({
             className="w-full flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>{t('sign_out', 'ভয়েজার আইডি সাইন আউট')}</span>
+            <span>{t('sign_out', 'Voyager ID Sign Out')}</span>
           </button>
         </div>
       </div>
@@ -428,43 +429,22 @@ export const Navbar = ({
             className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none"
             onClick={(e) => {
               e.preventDefault();
-              handleLinkClick('হোম', '#home');
+              handleLinkClick('Home', '#home');
             }}
           >
-            {branding?.logoUrl ? (
-              <div 
-                className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl transition-all"
-                style={{
-                  width: `${branding.logoWidth || 40}px`,
-                  height: `${branding.logoHeight || 40}px`
-                }}
-              >
-                <img 
-                  src={branding.logoUrl} 
-                  alt={branding.brandName || 'Brand Logo'}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <div 
-                className="relative flex items-center justify-center rounded-2xl bg-gradient-to-tr from-[#69EBDA] to-cyan-400 p-[1px] shadow-lg shadow-[#69EBDA]/30 group-hover:shadow-[#69EBDA]/50 transition-shadow duration-300 shrink-0"
-                style={{
-                  width: `${branding?.logoWidth || 40}px`,
-                  height: `${branding?.logoHeight || 40}px`
-                }}
-              >
-                <div className="w-full h-full bg-slate-950/80 rounded-[15px] flex items-center justify-center backdrop-blur-sm">
-                  <Compass 
-                    className="text-[#69EBDA] group-hover:rotate-45 transition-transform duration-500 ease-out" 
-                    style={{
-                      width: `${Math.max(14, Math.round((branding?.logoWidth || 40) * 0.45))}px`,
-                      height: `${Math.max(14, Math.round((branding?.logoHeight || 40) * 0.45))}px`
-                    }}
-                  />
-                </div>
-                <div className="absolute inset-0 rounded-2xl bg-[#69EBDA]/20 blur-sm group-hover:bg-[#69EBDA]/40 transition-colors" />
-              </div>
-            )}
+            <div 
+              className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl transition-all"
+              style={{
+                width: `${branding?.logoWidth || 40}px`,
+                height: `${branding?.logoHeight || 40}px`
+              }}
+            >
+              <img 
+                src={branding?.logoUrl || '/stb-logo.png'} 
+                alt={branding?.brandName || 'STB Brand Logo'}
+                className="w-full h-full object-contain"
+              />
+            </div>
             
             <div className="flex flex-col">
               <span 
@@ -476,12 +456,6 @@ export const Navbar = ({
                   className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" 
                   style={{ backgroundColor: branding?.accentColor || '#69EBDA' }}
                 />
-              </span>
-              <span 
-                className="text-[9px] sm:text-[10px] tracking-[0.25em] font-bold uppercase transition-colors -mt-0.5"
-                style={{ color: branding?.accentColor || '#69EBDA' }}
-              >
-                {branding?.tagline || t('brand_tagline', 'অভিজাত বিশ্বভ্রমণ')}
               </span>
             </div>
           </a>
@@ -553,7 +527,7 @@ export const Navbar = ({
                       }
                     `}
                     aria-label="Settings"
-                    title={language === 'en' ? 'Settings (Theme & Language)' : 'সেটিংস (থিম ও ভাষা)'}
+                    title="Settings (Theme & Language)"
                   >
                     <Settings 
                       className={`w-4 h-4 text-[#69EBDA] transition-transform duration-500 ease-out ${
@@ -597,6 +571,11 @@ export const Navbar = ({
               </div>
             )}
 
+            {/* Live RxDB + Supabase Sync Status Pill */}
+            <div className="hidden xl:flex items-center">
+              <SyncStatusBadge compact />
+            </div>
+
             {/* Glowing "Book a Call" CTA button (hidden on very small mobile) */}
             <button
               onClick={onOpenBookCall}
@@ -611,10 +590,10 @@ export const Navbar = ({
                 transform hover:-translate-y-0.5 active:translate-y-0
                 transition-all duration-300 items-center gap-1.5 cursor-pointer
               "
-              aria-label="পরামর্শের জন্য কল বুক করুন"
+              aria-label="Book a consultation call"
             >
               <PhoneCall className="w-3.5 h-3.5 text-slate-950 transition-transform group-hover:scale-110 shrink-0" />
-              <span>{t('book_a_call', 'কল বুক করুন')}</span>
+              <span>{t('book_a_call', 'Book a Call')}</span>
             </button>
 
             {/* User Profile / Auth Trigger on Far Right */}
@@ -669,7 +648,7 @@ export const Navbar = ({
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 min-h-[40px] rounded-2xl bg-white/15 hover:bg-[#69EBDA]/25 border border-[#69EBDA]/40 dark:border-white/20 text-white font-bold text-xs sm:text-sm backdrop-blur-xl transition-all duration-300 shadow-sm cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5 text-[#69EBDA]" />
-                <span>{t('sign_in', 'সাইন ইন')}</span>
+                <span>{t('sign_in', 'Sign In')}</span>
               </button>
             )}
 
@@ -716,7 +695,7 @@ export const Navbar = ({
               >
                 <div className="flex items-center justify-between pb-1.5 sm:pb-2 mb-1 sm:mb-2 border-b border-white/15">
                   <span className="text-[11px] sm:text-xs font-extrabold text-[#69EBDA] tracking-wider uppercase font-['Outfit',sans-serif]">
-                    {language === 'en' ? 'Navigation Menu' : 'ন্যাভিগেশন মেনু'}
+                    Navigation Menu
                   </span>
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {user && <LanguageSelector />}
@@ -760,7 +739,7 @@ export const Navbar = ({
                       className="w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#69EBDA] via-[#2dd4bf] to-cyan-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md shadow-[#69EBDA]/30 cursor-pointer"
                     >
                       <PhoneCall className="w-3.5 h-3.5 text-slate-950" />
-                      <span>{t('book_a_call', 'কল বুক করুন')}</span>
+                      <span>{t('book_a_call', 'Book a Call')}</span>
                     </button>
                   </li>
                 </ul>

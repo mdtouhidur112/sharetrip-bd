@@ -22,11 +22,14 @@ export const Helmet = ({
   ogTitle,
   ogDescription,
   ogImage,
+  ogImageAlt,
+  ogSiteName,
   ogUrl,
   ogType = 'website',
   twitterCard = 'summary_large_image',
   twitterSite,
   googleVerification,
+  faviconUrl,
   jsonLd
 }) => {
   useContext(HelmetContext);
@@ -63,9 +66,11 @@ export const Helmet = ({
 
     // Open Graph (Facebook, WhatsApp, LinkedIn)
     upsertMeta('property', 'og:type', ogType);
+    upsertMeta('property', 'og:site_name', ogSiteName || 'ShareTrip BD');
     upsertMeta('property', 'og:title', ogTitle || title);
     upsertMeta('property', 'og:description', ogDescription || description);
     upsertMeta('property', 'og:image', ogImage);
+    upsertMeta('property', 'og:image:alt', ogImageAlt || ogTitle || title);
     upsertMeta('property', 'og:url', ogUrl || canonical || (typeof window !== 'undefined' ? window.location.href : ''));
 
     // Twitter / X Card
@@ -73,7 +78,19 @@ export const Helmet = ({
     upsertMeta('name', 'twitter:title', ogTitle || title);
     upsertMeta('name', 'twitter:description', ogDescription || description);
     upsertMeta('name', 'twitter:image', ogImage);
+    upsertMeta('name', 'twitter:image:alt', ogImageAlt || ogTitle || title);
     upsertMeta('name', 'twitter:site', twitterSite);
+
+    // Dynamic Favicon (browser title bar icon)
+    if (faviconUrl) {
+      const iconSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]'];
+      iconSelectors.forEach((selector) => {
+        const iconEl = document.head.querySelector(selector);
+        if (iconEl) {
+          iconEl.setAttribute('href', faviconUrl);
+        }
+      });
+    }
 
     // Canonical URL
     let canonicalEl = document.head.querySelector('link[rel="canonical"]');
@@ -111,11 +128,14 @@ export const Helmet = ({
     ogTitle,
     ogDescription,
     ogImage,
+    ogImageAlt,
+    ogSiteName,
     ogUrl,
     ogType,
     twitterCard,
     twitterSite,
     googleVerification,
+    faviconUrl,
     jsonLd
   ]);
 

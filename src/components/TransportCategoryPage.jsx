@@ -24,6 +24,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
   const [categories, setCategories] = useState(() => StorageService.getTransportCategories());
   const [transports, setTransports] = useState(() => StorageService.getTransports());
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().transportCategoryPage);
   const [activeCatId, setActiveCatId] = useState(categoryId || 'all');
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
 
@@ -40,14 +41,17 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
       setCategories(StorageService.getTransportCategories());
       setTransports(StorageService.getTransports());
       setServicesControl(StorageService.getServicesControl());
+      setSecText(StorageService.getSectionSettings().transportCategoryPage);
     };
     window.addEventListener('app:transports-updated', handleSync);
     window.addEventListener('app:transport-categories-updated', handleSync);
     window.addEventListener('app:services-control-updated', handleSync);
+    window.addEventListener('app:section-settings-updated', handleSync);
     return () => {
       window.removeEventListener('app:transports-updated', handleSync);
       window.removeEventListener('app:transport-categories-updated', handleSync);
       window.removeEventListener('app:services-control-updated', handleSync);
+      window.removeEventListener('app:section-settings-updated', handleSync);
     };
   }, []);
 
@@ -55,22 +59,22 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
     if (activeCatId === 'all') {
       return {
         id: 'all',
-        name: 'সকল যানবাহন ও পরিবহন সেবা',
-        subtitle: 'সড়ক, নদী ও আকাশ পথ',
+        name: secText?.title ?? 'All Vehicles & Transport Services',
+        subtitle: secText?.subtitle ?? 'Road, River & Air Routes',
         icon: 'Car',
-        description: 'আমাদের বহরের সকল প্রিমিয়াম বাহন ও বিশেষ সেবা। যেকোনো বাহন বুক করতে হোয়াটসঅ্যাপে সরাসরি যোগাযোগ করুন।',
+        description: secText?.description ?? 'Explore our fleet of premium vehicles and private charters. Contact us directly on WhatsApp or book online.',
         photo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80'
       };
     }
     return categories.find((c) => c.id === activeCatId) || categories[0] || {
       id: 'road',
-      name: 'রোড সার্ভিস',
-      subtitle: 'সড়ক পথ',
+      name: 'Road Service',
+      subtitle: 'Road Routes',
       icon: 'Car',
-      description: 'লাক্সারি প্রাইভেট সিডান, ৪x৪ এসইউভি ও ভিআইপি মাইক্রোবাসে আরামদায়ক সড়ক ভ্রমণ।',
+      description: 'Luxury private sedans, 4x4 SUVs, and VIP microbuses for comfortable road travel.',
       photo: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80'
     };
-  }, [activeCatId, categories]);
+  }, [activeCatId, categories, secText]);
 
   const filteredTransports = useMemo(() => {
     const tokens = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -102,7 +106,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
   const handleInquireTransport = (item) => {
     const rawWa = (StorageService.getContactInfo()?.whatsapp || '18005550199').replace(/[^0-9]/g, '');
     const text = encodeURIComponent(
-      `হ্যালো এথেরিয়া কনসিয়ার্জ, আমি আপনাদের "${item.name}" (${item.categoryName || item.category || 'পরিবহন'}) বুকিং বা ভাড়া সম্পর্কে বিস্তারিত জানতে আগ্রহী।`
+      `Hello Etheria Concierge, I would like to inquire about booking/renting "${item.name}" (${item.categoryName || item.category || 'transport'}). Please share details.`
     );
     window.open(`https://wa.me/${rawWa}?text=${text}`, '_blank', 'noopener,noreferrer');
   };
@@ -119,13 +123,13 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
             className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-300/80 dark:border-white/20 text-slate-800 dark:text-white hover:border-[#69EBDA] dark:hover:border-[#69EBDA] hover:text-teal-600 dark:hover:text-[#69EBDA] shadow-sm transition-all cursor-pointer font-bold text-xs sm:text-sm group"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            <span>মূল পাতায় ফিরে যান (Back)</span>
+            <span>Back to Main Page</span>
           </button>
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-[#69EBDA] border border-[#69EBDA]/30 text-xs font-bold">
               <ShieldCheck className="w-4 h-4" />
-              <span>নিরাপদ ও নির্ভরযোগ্য পরিবহন</span>
+              <span>Safe & Reliable Transport</span>
             </div>
           </div>
         </div>
@@ -144,7 +148,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
           <div className="relative z-10 max-w-2xl space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 text-teal-200 text-xs font-black uppercase tracking-wider backdrop-blur-md">
               <Sparkles className="w-3.5 h-3.5 text-[#69EBDA]" />
-              <span>{currentCategory.subtitle || 'পরিবহন ক্যাটাগরি'}</span>
+              <span>{currentCategory.subtitle || 'Transport Category'}</span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-['Outfit',sans-serif]">
@@ -173,7 +177,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <span>সকল বাহন ({transports.filter((t) => servicesControl?.transport !== false && servicesControl?.[t.category] !== false).length})</span>
+              <span>All Vehicles ({transports.filter((t) => servicesControl?.transport !== false && servicesControl?.[t.category] !== false).length})</span>
             </button>
 
             {categories.map((cat) => {
@@ -211,7 +215,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="বাহন বা মডেল খুঁজুন..."
+              placeholder="Search vehicle or model..."
               className="w-full pl-9 pr-4 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 outline-none focus:border-[#69EBDA]"
             />
           </div>
@@ -237,10 +241,10 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
           <div className="p-12 text-center rounded-3xl bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 max-w-lg mx-auto space-y-4">
             <Car className="w-12 h-12 text-slate-400 mx-auto" />
             <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-              এই ক্যাটাগরিতে কোনো বাহন পাওয়া যায়নি
+              No vehicles found in this category
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              অন্য কোনো ক্যাটাগরি বেছে নিন অথবা সকল বাহন দেখতে নিচের বাটনে ক্লিক করুন।
+              Choose another category or click the button below to view all vehicles.
             </p>
             <button
               type="button"
@@ -250,7 +254,7 @@ export const TransportCategoryPage = ({ categoryId, initialSearchQuery = '', onB
               }}
               className="px-5 py-2.5 rounded-xl bg-[#69EBDA] text-slate-950 font-bold text-xs cursor-pointer shadow-sm"
             >
-              সকল বাহন দেখুন
+              View All Vehicles
             </button>
           </div>
         )}

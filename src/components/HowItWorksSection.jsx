@@ -1,9 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Compass, SlidersHorizontal, PlaneTakeoff, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
-import { HOW_IT_WORKS_STEPS } from '../data/travelData';
+import { StorageService } from '../services/storageService';
 
 export const HowItWorksSection = ({ onExploreTours }) => {
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().howItWorks);
+
+  useEffect(() => {
+    const syncSection = () => setSecText(StorageService.getSectionSettings().howItWorks);
+    window.addEventListener('app:section-settings-updated', syncSection);
+    return () => window.removeEventListener('app:section-settings-updated', syncSection);
+  }, []);
+
+  const steps = [
+    {
+      step: '01',
+      icon: 'Compass',
+      badge: 'Discover',
+      title: secText?.step1Title ?? 'Choose Your Destination',
+      tagline: 'Curated destinations & verified stays',
+      description: secText?.step1Desc ?? 'Browse curated destinations or select hotels, transport, and dining tailored to your trip.'
+    },
+    {
+      step: '02',
+      icon: 'SlidersHorizontal',
+      badge: 'Personalize',
+      title: secText?.step2Title ?? 'Customize Your Plan',
+      tagline: 'Flexible dates, rooms & meal plans',
+      description: secText?.step2Desc ?? 'Select dates, guests, room specs, or meal plans with transparent real-time pricing.'
+    },
+    {
+      step: '03',
+      icon: 'PlaneTakeoff',
+      badge: 'Confirm',
+      title: secText?.step3Title ?? 'Confirm & Travel',
+      tagline: 'Instant confirmation & 24/7 support',
+      description: secText?.step3Desc ?? 'Complete your booking smoothly with instant confirmation and 24/7 concierge support.'
+    }
+  ];
+
   const getStepIcon = (iconName) => {
     switch (iconName) {
       case 'Compass':
@@ -25,21 +60,27 @@ export const HowItWorksSection = ({ onExploreTours }) => {
 
       {/* Section Header */}
       <div className="text-center max-w-2xl mx-auto mb-16 relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
-          <Sparkles className="w-3.5 h-3.5" />
-          সহজ ও স্বাচ্ছন্দ্যময় ভ্রমণ
-        </div>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-          কার্যপদ্ধতি
-        </h2>
-        <p className="mt-3 text-black/70 dark:text-slate-300 text-sm sm:text-base font-medium">
-          শুরুর পরিকল্পনা থেকে গন্তব্যে পৌঁছানো পর্যন্ত—ব্যক্তিগত ভ্রমণ স্থপতিদের পরিচালনায় উপভোগ করুন শতভাগ নিশ্চিন্ত বুকিং অভিজ্ঞতা।
-        </p>
+        {secText?.badge && (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
+            <Sparkles className="w-3.5 h-3.5" />
+            {secText.badge}
+          </div>
+        )}
+        {secText?.title && (
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+            {secText.title}
+          </h2>
+        )}
+        {secText?.subtitle && (
+          <p className="mt-3 text-black/70 dark:text-slate-300 text-sm sm:text-base font-medium">
+            {secText.subtitle}
+          </p>
+        )}
       </div>
 
       {/* 3-Step Glass Bento Cards */}
       <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start relative z-10">
-        {HOW_IT_WORKS_STEPS.map((item, idx) => (
+        {steps.map((item, idx) => (
           <motion.div
             key={item.step}
             whileHover={{ y: -6, scale: 1.01 }}
@@ -92,10 +133,10 @@ export const HowItWorksSection = ({ onExploreTours }) => {
             <div className="mt-8 pt-4 border-t border-white/15 flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 text-slate-200 font-bold">
                 <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
-                শতভাগ প্রিমিয়াম সেবা
+                100% Premium Service
               </span>
               <span className="text-[#69EBDA] font-extrabold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                ধাপ {idx + 1} / ৩ <ArrowRight className="w-3.5 h-3.5" />
+                Step {idx + 1} / 3 <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </div>
 

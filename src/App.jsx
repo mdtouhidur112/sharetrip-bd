@@ -14,6 +14,7 @@ import { BrandSection } from './components/BrandSection';
 import { Footer } from './components/Footer';
 import { AdminAuthService } from './services/adminAuthService';
 import { StorageService } from './services/storageService';
+import { VisitorService } from './services/visitorService';
 import { useAuth } from './context/AuthContext';
 import { Helmet } from './context/HelmetContext';
 import { Sparkles, CheckCircle2, AlertTriangle, X } from 'lucide-react';
@@ -21,6 +22,8 @@ import { Sparkles, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 // Lazy-loaded pages & modals for optimal initial bundle size & fast first paint
 const HeroFilteredResults = lazy(() => import('./components/HeroFilteredResults').then(m => ({ default: m.HeroFilteredResults })));
 const AllDestinationsPage = lazy(() => import('./components/AllDestinationsPage').then(m => ({ default: m.AllDestinationsPage })));
+const AllReviewsPage = lazy(() => import('./components/AllReviewsPage').then(m => ({ default: m.AllReviewsPage })));
+const WishlistPage = lazy(() => import('./components/WishlistPage').then(m => ({ default: m.WishlistPage })));
 const ServicesPage = lazy(() => import('./components/ServicesPage').then(m => ({ default: m.ServicesPage })));
 const SingleHotelDetailPage = lazy(() => import('./components/SingleHotelDetailPage').then(m => ({ default: m.SingleHotelDetailPage })));
 const TransportCategoryPage = lazy(() => import('./components/TransportCategoryPage').then(m => ({ default: m.TransportCategoryPage })));
@@ -30,7 +33,6 @@ const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ defau
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminLoginModal = lazy(() => import('./components/admin/AdminLoginModal').then(m => ({ default: m.AdminLoginModal })));
 const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
-const WishlistModal = lazy(() => import('./components/UserModals').then(m => ({ default: m.WishlistModal })));
 const UserProfileModal = lazy(() => import('./components/UserModals').then(m => ({ default: m.UserProfileModal })));
 const MyBookingsPage = lazy(() => import('./components/MyBookingsPage').then(m => ({ default: m.MyBookingsPage })));
 
@@ -69,6 +71,8 @@ export default function App() {
   const [selectedTransportCategory, setSelectedTransportCategory] = useState(() => savedNav.selectedTransportCategory ?? null); // When set, renders the dedicated TransportCategoryPage
   const [isServicesPageOpen, setIsServicesPageOpen] = useState(() => Boolean(savedNav.isServicesPageOpen));
   const [isAllDestinationsPageOpen, setIsAllDestinationsPageOpen] = useState(() => Boolean(savedNav.isAllDestinationsPageOpen));
+  const [isAllReviewsPageOpen, setIsAllReviewsPageOpen] = useState(() => Boolean(savedNav.isAllReviewsPageOpen));
+  const [isWishlistPageOpen, setIsWishlistPageOpen] = useState(() => Boolean(savedNav.isWishlistPageOpen));
   const [isAboutPageOpen, setIsAboutPageOpen] = useState(() => Boolean(savedNav.isAboutPageOpen));
   const [isMyBookingsPageOpen, setIsMyBookingsPageOpen] = useState(() => Boolean(savedNav.isMyBookingsPageOpen));
   const [activeServiceTab, setActiveServiceTab] = useState(() => savedNav.activeServiceTab || 'hotels');
@@ -77,6 +81,7 @@ export default function App() {
   const [isGlobalBookingModalOpen, setIsGlobalBookingModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [seoSettings, setSeoSettings] = useState(() => StorageService.getSeoSettings());
+  const [branding, setBranding] = useState(() => StorageService.getBranding());
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
   const [disabledServiceModal, setDisabledServiceModal] = useState(null);
   const hasRestoredScrollRef = useRef(false);
@@ -94,6 +99,8 @@ export default function App() {
           selectedTransportCategory,
           isServicesPageOpen,
           isAllDestinationsPageOpen,
+          isAllReviewsPageOpen,
+          isWishlistPageOpen,
           isAboutPageOpen,
           isMyBookingsPageOpen,
           activeServiceTab,
@@ -111,6 +118,8 @@ export default function App() {
     selectedTransportCategory,
     isServicesPageOpen,
     isAllDestinationsPageOpen,
+    isAllReviewsPageOpen,
+    isWishlistPageOpen,
     isAboutPageOpen,
     isMyBookingsPageOpen,
     activeServiceTab,
@@ -171,6 +180,7 @@ export default function App() {
 
   useEffect(() => {
     const syncSeo = () => setSeoSettings(StorageService.getSeoSettings());
+    const syncBranding = () => setBranding(StorageService.getBranding());
     const syncServicesControl = () => setServicesControl(StorageService.getServicesControl());
     const handleDisabledClick = (e) => {
       if (e?.detail) {
@@ -178,14 +188,46 @@ export default function App() {
       }
     };
     window.addEventListener('app:seo-settings-updated', syncSeo);
+    window.addEventListener('app:branding-updated', syncBranding);
     window.addEventListener('app:services-control-updated', syncServicesControl);
     window.addEventListener('app:service-disabled-clicked', handleDisabledClick);
     return () => {
       window.removeEventListener('app:seo-settings-updated', syncSeo);
+      window.removeEventListener('app:branding-updated', syncBranding);
       window.removeEventListener('app:services-control-updated', syncServicesControl);
       window.removeEventListener('app:service-disabled-clicked', handleDisabledClick);
     };
   }, []);
+
+  // Live Website Visitor Tracking (Users vs Non-Users/Guests)
+  useEffect(() => {
+    if (isAdminMode) return undefined;
+    const currentViewPath = selectedHotel?.name
+      ? `/hotel/${selectedHotel.name}`
+      : isServicesPageOpen
+        ? `/services/${activeServiceTab || 'hotels'}`
+        : isMyBookingsPageOpen
+          ? '/my-bookings'
+          : isAboutPageOpen
+            ? '/about'
+            : isAllDestinationsPageOpen
+              ? '/destinations'
+              : (typeof window !== 'undefined' ? window.location.pathname : '/');
+
+    const stopTracking = VisitorService.startTracking(() => user, () => currentViewPath);
+    return () => {
+      stopTracking();
+    };
+  }, [
+    isAdminMode,
+    user,
+    selectedHotel?.name,
+    isServicesPageOpen,
+    activeServiceTab,
+    isMyBookingsPageOpen,
+    isAboutPageOpen,
+    isAllDestinationsPageOpen
+  ]);
 
   // Auto-close any open service view if admin disables that service in real time
   useEffect(() => {
@@ -224,26 +266,31 @@ export default function App() {
     }
   }, [servicesControl, isAdminMode, selectedHotel, selectedTransportCategory, isServicesPageOpen, activeServiceTab, activeHeroFilter]);
 
-  // Core Routing Logic: Detect /admin route (pathname) and #admin (hash)
+  // Core Routing Logic: Separate routes for Root Admin (/admin) and Normal Admin (/normal-admin)
   const checkRoute = () => {
     const pathname = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
-    const isTargetingAdmin = pathname === '/admin' || pathname === '/admin/' || hash === '#admin';
+    const isTargetingRootAdmin = pathname === '/admin' || pathname === '/admin/' || hash === '#admin';
+    const isTargetingNormalAdmin = pathname === '/normal-admin' || pathname === '/normal-admin/' || hash === '#normal-admin';
 
-    if (isTargetingAdmin) {
-      if (AdminAuthService.isAuthenticated()) {
-        setIsAdminAuthenticated(true);
-        setIsAdminMode(true);
-        setIsAdminLoginModalOpen(false);
-      } else if (user && StorageService.isNormalAdmin(user.email)) {
-        // If current logged-in website user has Normal Admin rights, log them in directly
-        AdminAuthService.loginAsNormalAdmin(user);
+    if (isTargetingRootAdmin) {
+      if (AdminAuthService.isRootAdmin()) {
         setIsAdminAuthenticated(true);
         setIsAdminMode(true);
         setIsAdminLoginModalOpen(false);
       } else {
         setIsAdminMode(false);
         setIsAdminLoginModalOpen(true);
+      }
+    } else if (isTargetingNormalAdmin) {
+      if (AdminAuthService.isNormalAdmin() && user && StorageService.isNormalAdmin(user.email)) {
+        setIsAdminAuthenticated(true);
+        setIsAdminMode(true);
+        setIsAdminLoginModalOpen(false);
+      } else {
+        setIsAdminMode(false);
+        setIsAdminLoginModalOpen(false);
+        window.history.pushState({}, '', '/');
       }
     } else {
       // If user navigates away to / or any non-admin route
@@ -281,10 +328,24 @@ export default function App() {
       setIsAdminMode(false);
       setIsServicesPageOpen(false);
       setIsAllDestinationsPageOpen(false);
+      setIsAllReviewsPageOpen(false);
+      setIsWishlistPageOpen(false);
       setIsAboutPageOpen(false);
       setSelectedHotel(null);
       setSelectedTransportCategory(null);
       setIsMyBookingsPageOpen(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (activeUserModal === 'wishlist') {
+      closeUserModal();
+      setIsAdminMode(false);
+      setIsServicesPageOpen(false);
+      setIsAllDestinationsPageOpen(false);
+      setIsAllReviewsPageOpen(false);
+      setIsAboutPageOpen(false);
+      setIsMyBookingsPageOpen(false);
+      setSelectedHotel(null);
+      setSelectedTransportCategory(null);
+      setIsWishlistPageOpen(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [activeUserModal, closeUserModal]);
@@ -313,9 +374,11 @@ export default function App() {
     setSelectedHotel(item);
     if (clearTransport) setSelectedTransportCategory(null);
     if (fromServices) setIsServicesPageOpen(false);
+    setIsWishlistPageOpen(false);
+    setIsAllReviewsPageOpen(false);
     setIsAdminMode(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showToast(`${item.name}-এর বিস্তারিত বিবরণ দেখা হচ্ছে`);
+    showToast(`Viewing details for ${item.name}`);
   };
 
   const handleSearch = (filterPayload) => {
@@ -333,6 +396,8 @@ export default function App() {
     setSelectedTransportCategory(null);
     setIsServicesPageOpen(false);
     setIsAllDestinationsPageOpen(false);
+    setIsAllReviewsPageOpen(false);
+    setIsWishlistPageOpen(false);
     setIsAboutPageOpen(false);
     setIsMyBookingsPageOpen(false);
     setActiveHeroFilter(filterPayload);
@@ -344,11 +409,11 @@ export default function App() {
 
     if (activeTab === 'transport') {
       const routeText = [pickup, dropoff].filter(Boolean).join(' → ');
-      showToast(`ট্রান্সপোর্ট ফিল্টার: ${subOption || 'Road Services'}${routeText ? ` • ${routeText}` : ''}`);
+      showToast(`Transport filter: ${subOption || 'Road Services'}${routeText ? ` • ${routeText}` : ''}`);
     } else if (activeTab === 'restaurant') {
-      showToast(`রেস্টুরেন্ট ফিল্টার: ${effectiveQuery || mealPlan || 'সকল ডাইনিং'} • ${guests || 2} জন`);
+      showToast(`Restaurant filter: ${effectiveQuery || mealPlan || 'All Dining'} • ${guests || 2} Guests`);
     } else {
-      showToast(`হোটেল ফিল্টার: ${effectiveQuery || 'সব হোটেল'} • ${guests || 2} জন অতিথি`);
+      showToast(`Hotel filter: ${effectiveQuery || 'All Hotels'} • ${guests || 2} Guests`);
     }
   };
 
@@ -360,6 +425,8 @@ export default function App() {
     setActiveServiceTab(tab);
     setIsServicesPageOpen(true);
     setIsAboutPageOpen(false);
+    setIsWishlistPageOpen(false);
+    setIsAllReviewsPageOpen(false);
     setIsMyBookingsPageOpen(false);
     setSelectedHotel(null);
     setSelectedTransportCategory(null);
@@ -392,13 +459,13 @@ export default function App() {
       (d) => (d.id || '').toLowerCase() === String(categoryId).toLowerCase()
     );
     const catNames = {
-      beach: 'সমুদ্র সৈকত',
-      adventure: 'রোমাঞ্চকর অভিযান',
-      nature: 'প্রকৃতি ও অরণ্য',
-      all: 'সব'
+      beach: 'Beach',
+      adventure: 'Adventure',
+      nature: 'Nature',
+      all: 'All'
     };
     const displayName = matchedDest?.destinationName || matchedDest?.title || catNames[categoryId] || categoryId;
-    showToast(`${displayName} এর হোটেল ও রিসোর্টসমূহ দেখা হচ্ছে`);
+    showToast(`Showing hotels & resorts for ${displayName}`);
   };
 
   const scrollToSection = (targetId) => {
@@ -426,6 +493,8 @@ export default function App() {
     }
     setIsServicesPageOpen(false);
     setIsAllDestinationsPageOpen(false);
+    setIsAllReviewsPageOpen(false);
+    setIsWishlistPageOpen(false);
     setIsMyBookingsPageOpen(false);
     setSelectedHotel(null);
     setSelectedTransportCategory(null);
@@ -440,34 +509,34 @@ export default function App() {
     scrollToSection(targetId);
   };
 
-  // Open Admin: triggered from navbar, footer, or buttons
-  const handleOpenAdmin = () => {
-    // 1. If already authenticated:
-    if (AdminAuthService.isAuthenticated()) {
-      setIsAdminAuthenticated(true);
-      setIsAdminMode(true);
-      setIsAdminLoginModalOpen(false);
-      window.history.pushState({}, '', '/admin');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      showToast('অ্যাডমিন অপারেশনস প্যানেলে প্রবেশ করেছেন');
-      return;
-    }
-
-    // 2. If logged-in user has Normal Admin access granted by Root Admin:
-    if (user && StorageService.isNormalAdmin(user.email)) {
+  // Open Admin: triggered from navbar profile popup ('profile' -> /normal-admin), footer, or /admin
+  const handleOpenAdmin = (source = 'route') => {
+    // 1. If triggered from a logged-in user's Profile Popup Box, ALWAYS authenticate strictly as Normal Admin on /normal-admin
+    if (source === 'profile' && user && StorageService.isNormalAdmin(user.email)) {
       const res = AdminAuthService.loginAsNormalAdmin(user);
       if (res.success) {
         setIsAdminAuthenticated(true);
         setIsAdminMode(true);
         setIsAdminLoginModalOpen(false);
-        window.history.pushState({}, '', '/admin');
+        window.history.pushState({}, '', '/normal-admin');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast(`স্বাগতম, ${user.name}! আপনি নরমাল অ্যাডমিন হিসেবে প্রবেশ করেছেন।`);
+        showToast(`Welcome, ${user.name}! Signed in as Normal Admin.`);
         return;
       }
     }
 
-    // 3. Otherwise: Opens Root Admin Login Modal (.env credentials required)
+    // 2. If already authenticated as Root Admin (.env):
+    if (AdminAuthService.isRootAdmin()) {
+      setIsAdminAuthenticated(true);
+      setIsAdminMode(true);
+      setIsAdminLoginModalOpen(false);
+      window.history.pushState({}, '', '/admin');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('Entered Root Admin Operations Panel');
+      return;
+    }
+
+    // 3. Otherwise (/admin): Always require Root Admin (.env) username & password login
     window.history.pushState({}, '', '/admin');
     setIsAdminMode(false);
     setIsAdminLoginModalOpen(true);
@@ -480,7 +549,7 @@ export default function App() {
     setIsAdminMode(true);
     window.history.pushState({}, '', '/admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showToast(`স্বাগতম, ${adminData.name || 'অ্যাডমিন'}! অ্যাডমিন ড্যাশবোর্ড সফলভাবে সক্রিয় হয়েছে।`);
+    showToast(`Welcome, ${adminData.name || 'Admin'}! Admin Dashboard activated.`);
   };
 
   // Close Admin Login Modal (Cancel)
@@ -499,7 +568,7 @@ export default function App() {
     setIsAdminLoginModalOpen(false);
     window.history.pushState({}, '', '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showToast('অ্যাডমিন সেশন সমাপ্ত হয়েছে এবং মূল ওয়েবসাইটে ফিরে এসেছেন');
+    showToast('Admin session ended. Returned to main website.');
   };
 
   const pageTitle = isAdminMode
@@ -516,17 +585,28 @@ export default function App() {
               ? `Destinations | ${seoSettings?.siteTitle || 'ShareTrip BD'}`
               : seoSettings?.siteTitle || 'ShareTrip BD';
 
-  const schemaJsonLd = seoSettings?.schemaOrgName
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'TravelAgency',
-        name: seoSettings.schemaOrgName,
-        url: seoSettings.canonicalUrl || (typeof window !== 'undefined' ? window.location.origin : ''),
-        telephone: seoSettings.schemaPhone || undefined,
-        address: seoSettings.schemaAddress || undefined,
-        image: seoSettings.ogImage || undefined
-      }
-    : null;
+  const siteOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const resolveAbsoluteUrl = (urlPath) => {
+    if (!urlPath) return '';
+    if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath;
+    return siteOrigin ? `${siteOrigin}${urlPath.startsWith('/') ? '' : '/'}${urlPath}` : urlPath;
+  };
+  const activeBrandLogoUrl = branding?.logoUrl || '/stb-logo.png';
+  const seoLogoImage = resolveAbsoluteUrl(seoSettings?.ogImage || activeBrandLogoUrl || '/stb-logo.png');
+  const schemaLogoUrl = resolveAbsoluteUrl(branding?.logoUrl || '/icon-512x512.png');
+
+  const schemaJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'TravelAgency',
+    name: seoSettings?.schemaOrgName || branding?.brandName || 'ShareTrip BD',
+    alternateName: 'STB',
+    description: seoSettings?.metaDescription || 'Book curated tour packages, luxury hotels, transport & dining experiences across Bangladesh and worldwide.',
+    url: seoSettings?.canonicalUrl || siteOrigin || undefined,
+    telephone: seoSettings?.schemaPhone || undefined,
+    address: seoSettings?.schemaAddress || undefined,
+    logo: schemaLogoUrl || undefined,
+    image: seoLogoImage || undefined
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-x-clip text-black/70 dark:text-slate-100 selection:bg-[#69EBDA]/30 selection:text-slate-900 transition-colors duration-300">
@@ -538,10 +618,13 @@ export default function App() {
         robots={seoSettings?.robots}
         ogTitle={seoSettings?.ogTitle || pageTitle}
         ogDescription={seoSettings?.ogDescription || seoSettings?.metaDescription}
-        ogImage={seoSettings?.ogImage}
+        ogImage={seoLogoImage}
+        ogImageAlt={`${seoSettings?.schemaOrgName || branding?.brandName || 'ShareTrip BD'} Logo`}
+        ogSiteName={seoSettings?.schemaOrgName || branding?.brandName || 'ShareTrip BD'}
         twitterCard={seoSettings?.twitterCard}
         twitterSite={seoSettings?.twitterSite}
         googleVerification={seoSettings?.googleVerification}
+        faviconUrl={branding?.logoUrl || '/favicon-32x32.png'}
         jsonLd={schemaJsonLd}
       />
       {/* 1. Ambient Dynamic Glass Background with Blobs */}
@@ -570,6 +653,7 @@ export default function App() {
           /* Dedicated Single Hotel & Resort Details Page with Calendar & Responsive Checkout */
           <SingleHotelDetailPage
             hotel={selectedHotel}
+            initialFilter={activeHeroFilter}
             onBack={() => {
               setSelectedHotel(null);
               if (returnToServices) {
@@ -579,7 +663,7 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onBookingSuccess={(booking) => {
-              showToast(`বুকিং সফলভাবে সম্পন্ন হয়েছে! আপনার আইডি: ${booking.itemId || 'AETH-BK'}`);
+              showToast(`Booking completed successfully! Your ID: ${booking.itemId || 'AETH-BK'}`);
             }}
           />
         ) : selectedTransportCategory ? (
@@ -646,6 +730,24 @@ export default function App() {
             onOpenContact={() => {
               setIsAboutPageOpen(false);
               scrollToSection('contact-info');
+            }}
+          />
+        ) : isWishlistPageOpen ? (
+          <WishlistPage
+            onBack={() => {
+              setIsWishlistPageOpen(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectHotel={(hotel) => handleOpenServiceItem(hotel)}
+          />
+        ) : isAllReviewsPageOpen ? (
+          <AllReviewsPage
+            onBack={() => {
+              setIsAllReviewsPageOpen(false);
+              setTimeout(() => {
+                const el = document.getElementById('reviews');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }, 80);
             }}
           />
         ) : isAllDestinationsPageOpen ? (
@@ -722,7 +824,12 @@ export default function App() {
                 <CoreServicesSection onSelectService={handleOpenServicesPage} />
 
                 {/* Step 4: Client Testimonials & Reviews Grid/Carousel */}
-                <ClientReviewsSection />
+                <ClientReviewsSection
+                  onOpenAllReviews={() => {
+                    setIsAllReviewsPageOpen(true);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
 
                 {/* Step 4: Contact & Office Info Bento Section (Dhaka & NY Offices, Hours, WhatsApp, Gmail, Phone) */}
                 <ContactBentoSection 
@@ -764,7 +871,7 @@ export default function App() {
             onClose={() => setIsGlobalBookingModalOpen(false)}
             onSuccess={(data) => {
               StorageService.saveBooking(data);
-              showToast(`অনুরোধ #${data.id} সফলভাবে সংরক্ষিত হয়েছে!`);
+              showToast(`Inquiry #${data.id} saved successfully!`);
             }}
           />
         )}
@@ -778,13 +885,7 @@ export default function App() {
         {/* Complete Interactive Liquid Glass Auth Modal */}
         <AuthModal />
 
-        {/* User Profile Modals (Wishlist, Settings) */}
-        <WishlistModal
-          isOpen={activeUserModal === 'wishlist'}
-          onClose={closeUserModal}
-          onSelectHotel={(hotel) => handleOpenServiceItem(hotel)}
-        />
-
+        {/* User Profile Modals (Settings) */}
         <UserProfileModal
           isOpen={activeUserModal === 'settings'}
           onClose={closeUserModal}

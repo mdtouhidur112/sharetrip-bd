@@ -12,13 +12,13 @@ export const GuestSettingsPopover = ({ className = '' }) => {
   const popoverRef = useRef(null);
 
   const themeOptions = [
-    { id: 'light', label: 'লাইট মোড', icon: Sun },
-    { id: 'dark', label: 'ডার্ক মোড', icon: Moon },
-    { id: 'system', label: 'সিস্টেম থিম', icon: Monitor },
+    { id: 'light', label: 'Light Mode', icon: Sun },
+    { id: 'dark', label: 'Dark Mode', icon: Moon },
+    { id: 'system', label: 'System Theme', icon: Monitor },
   ];
 
   const languageOptions = [
-    { code: 'bn', label: 'বাংলা', flag: '🇧🇩' },
+    { code: 'bn', label: 'Bengali', flag: '🇧🇩' },
     { code: 'en', label: 'English', flag: '🇬🇧' },
   ];
 
@@ -72,7 +72,7 @@ export const GuestSettingsPopover = ({ className = '' }) => {
           }
         `}
         aria-label="Settings"
-        title={language === 'en' ? 'Settings (Theme & Language)' : 'সেটিংস (থিম ও ভাষা)'}
+        title="Settings (Theme & Language)"
       >
         <Settings 
           className={`w-4 h-4 text-[#69EBDA] transition-transform duration-500 ease-out ${
@@ -109,11 +109,11 @@ export const GuestSettingsPopover = ({ className = '' }) => {
               <div className="flex items-center justify-between pb-2 border-b border-white/15">
                 <span className="text-xs font-extrabold text-white flex items-center gap-1.5 font-['Outfit',sans-serif]">
                   <Settings className="w-3.5 h-3.5 text-[#69EBDA]" />
-                  <span>{language === 'en' ? 'Quick Preferences' : 'কুইক সেটিংস'}</span>
+                  <span>Quick Preferences</span>
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] uppercase font-bold text-[#69EBDA] tracking-wider px-2 py-0.5 rounded-full bg-[#69EBDA]/15 border border-[#69EBDA]/30">
-                    {language === 'en' ? 'Guest' : 'গেস্ট'}
+                    Guest
                   </span>
                   <button
                     type="button"
@@ -130,7 +130,7 @@ export const GuestSettingsPopover = ({ className = '' }) => {
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
                   <span className="flex items-center gap-1.5">
                     <Palette className="w-3.5 h-3.5 text-[#69EBDA]" />
-                    <span>{language === 'en' ? 'Theme Mode' : 'থিম পরিবর্তন'}</span>
+                    <span>Theme Mode</span>
                   </span>
                   <span className="text-[10px] text-[#69EBDA] capitalize">
                     {themeMode}
@@ -169,10 +169,10 @@ export const GuestSettingsPopover = ({ className = '' }) => {
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
                   <span className="flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-[#69EBDA]" />
-                    <span>{language === 'en' ? 'Language' : 'ভাষা পরিবর্তন'}</span>
+                    <span>Language</span>
                   </span>
                   <span className="text-[10px] text-[#69EBDA]">
-                    {language === 'en' ? 'English' : 'বাংলা'}
+                    {language === 'en' ? 'English' : 'Bengali'}
                   </span>
                 </div>
 

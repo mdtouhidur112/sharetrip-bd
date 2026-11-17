@@ -15,8 +15,8 @@ import {
 export const BookCallModal = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [destinationPreference, setDestinationPreference] = useState('যেকোনো নির্বাচিত গন্তব্য');
-  const [preferredTime, setPreferredTime] = useState('সকাল (৯টা - ১২টা)');
+  const [destinationPreference, setDestinationPreference] = useState('Any featured destination');
+  const [preferredTime, setPreferredTime] = useState('Morning (9 AM - 12 PM)');
   const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
@@ -59,14 +59,14 @@ export const BookCallModal = ({ isOpen, onClose }) => {
           
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 text-[#69EBDA] text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            বিনামূল্যে ১-অন-১ কনসালটেশন
+            Free 1-on-1 Consultation
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
-            ট্রাভেল বিশেষজ্ঞের সাথে কল বুক করুন
+            Book a Call with a Travel Specialist
           </h2>
           <p className="mt-2 text-slate-100 dark:text-slate-300 text-xs sm:text-sm font-medium">
-            কোনো প্রকার বাধ্যবাধকতা ছাড়াই আপনার স্বপ্নের ভ্রমণ পরিকল্পনা সাজাতে আমাদের প্রিমিয়ার ট্রাভেল বিশেষজ্ঞের সাথে সরাসরি কথা বলুন।
+            Speak directly with our premier travel specialists to design your dream itinerary with no obligations.
           </p>
         </div>
 
@@ -77,24 +77,24 @@ export const BookCallModal = ({ isOpen, onClose }) => {
               <Check className="w-8 h-8 stroke-[3]" />
             </div>
             <h3 className="text-xl font-black text-white font-['Outfit',sans-serif]">
-              আপনার কনসালটেশন বুকিং নিশ্চিত হয়েছে!
+              Your consultation booking is confirmed!
             </h3>
             <p className="text-slate-100 dark:text-slate-300 text-sm max-w-xs mx-auto font-medium">
-              আমাদের প্রধান ট্রাভেল বিশেষজ্ঞ শীঘ্রই আপনার সাথে যোগাযোগ করবেন। আপনার ইমেইল চেক করুন ক্যালেন্ডার ইনভাইটেশন ও বিস্তারিত তথ্যের জন্য।
+              Our lead travel specialist will be in touch shortly. Please check your email for the calendar invitation and further details.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-4">
             <div>
               <label className="text-xs font-extrabold text-slate-200 dark:text-slate-300 uppercase tracking-wider block mb-1.5">
-                পূর্ণ নাম
+                Full Name
               </label>
               <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-800/45 dark:bg-white/[0.05] border border-white/20 dark:border-white/15 focus-within:border-[#69EBDA] focus-within:bg-slate-800/70 transition-colors">
                 <User className="w-4 h-4 text-[#69EBDA]" />
                 <input
                   type="text"
                   required
-                  placeholder="যেমন: তানভীর আহমেদ"
+                  placeholder="e.g. John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-transparent text-sm text-white font-medium placeholder-slate-400 focus:outline-none"
@@ -104,14 +104,14 @@ export const BookCallModal = ({ isOpen, onClose }) => {
 
             <div>
               <label className="text-xs font-extrabold text-slate-200 dark:text-slate-300 uppercase tracking-wider block mb-1.5">
-                ইমেইল ঠিকানা
+                Email Address
               </label>
               <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-800/45 dark:bg-white/[0.05] border border-white/20 dark:border-white/15 focus-within:border-[#69EBDA] focus-within:bg-slate-800/70 transition-colors">
                 <Mail className="w-4 h-4 text-[#69EBDA]" />
                 <input
                   type="email"
                   required
-                  placeholder="tanvir@example.com"
+                  placeholder="john@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-transparent text-sm text-white font-medium placeholder-slate-400 focus:outline-none"
@@ -122,7 +122,7 @@ export const BookCallModal = ({ isOpen, onClose }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-extrabold text-slate-200 dark:text-slate-300 uppercase tracking-wider block mb-1.5">
-                  পছন্দের ভ্রমণ গন্তব্য
+                  Preferred Destination
                 </label>
                 <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-800/45 dark:bg-white/[0.05] border border-white/20 dark:border-white/15">
                   <Globe className="w-4 h-4 text-[#69EBDA]" />
@@ -131,20 +131,20 @@ export const BookCallModal = ({ isOpen, onClose }) => {
                     onChange={(e) => setDestinationPreference(e.target.value)}
                     className="w-full bg-transparent text-xs text-white font-medium focus:outline-none cursor-pointer"
                   >
-                    <option value="যেকোনো নির্বাচিত গন্তব্য" className="bg-slate-900 text-white">যেকোনো নির্বাচিত গন্তব্য</option>
-                    <option value="বালি ও ইন্দোনেশিয়া" className="bg-slate-900 text-white">বালি ও ইন্দোনেশিয়া</option>
-                    <option value="পেরু ও আন্দিজ" className="bg-slate-900 text-white">পেরু ও আন্দিজ</option>
-                    <option value="আমালফি কোস্ট, ইতালি" className="bg-slate-900 text-white">আমালফি কোস্ট, ইতালি</option>
-                    <option value="কিয়োটো ও জাপান" className="bg-slate-900 text-white">কিয়োটো ও জাপান</option>
-                    <option value="সুইস আল্পস" className="bg-slate-900 text-white">সুইস আল্পস</option>
-                    <option value="সান্তোরিনি ও সাইক্ল্যাডিস" className="bg-slate-900 text-white">সান্তোরিনি ও সাইক্ল্যাডিস</option>
+                    <option value="Any featured destination" className="bg-slate-900 text-white">Any featured destination</option>
+                    <option value="Bali & Indonesia" className="bg-slate-900 text-white">Bali & Indonesia</option>
+                    <option value="Peru & The Andes" className="bg-slate-900 text-white">Peru & The Andes</option>
+                    <option value="Amalfi Coast, Italy" className="bg-slate-900 text-white">Amalfi Coast, Italy</option>
+                    <option value="Kyoto & Japan" className="bg-slate-900 text-white">Kyoto & Japan</option>
+                    <option value="Swiss Alps" className="bg-slate-900 text-white">Swiss Alps</option>
+                    <option value="Santorini & Cyclades" className="bg-slate-900 text-white">Santorini & Cyclades</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-extrabold text-slate-200 dark:text-slate-300 uppercase tracking-wider block mb-1.5">
-                  পছন্দের সময়সূচী
+                  Preferred Time Slot
                 </label>
                 <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-800/45 dark:bg-white/[0.05] border border-white/20 dark:border-white/15">
                   <Clock className="w-4 h-4 text-[#69EBDA]" />
@@ -153,9 +153,9 @@ export const BookCallModal = ({ isOpen, onClose }) => {
                     onChange={(e) => setPreferredTime(e.target.value)}
                     className="w-full bg-transparent text-xs text-white font-medium focus:outline-none cursor-pointer"
                   >
-                    <option value="সকাল (৯টা - ১২টা)" className="bg-slate-900 text-white">সকাল (৯টা - ১২টা)</option>
-                    <option value="দুপুর / বিকেল (১টা - ৫টা)" className="bg-slate-900 text-white">দুপুর / বিকেল (১টা - ৫টা)</option>
-                    <option value="সন্ধ্যা / রাত (৬টা - ৯টা)" className="bg-slate-900 text-white">সন্ধ্যা / রাত (৬টা - ৯টা)</option>
+                    <option value="Morning (9 AM - 12 PM)" className="bg-slate-900 text-white">Morning (9 AM - 12 PM)</option>
+                    <option value="Afternoon (1 PM - 5 PM)" className="bg-slate-900 text-white">Afternoon (1 PM - 5 PM)</option>
+                    <option value="Evening (6 PM - 9 PM)" className="bg-slate-900 text-white">Evening (6 PM - 9 PM)</option>
                   </select>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export const BookCallModal = ({ isOpen, onClose }) => {
                 "
               >
                 <PhoneCall className="w-4 h-4" />
-                বিনামূল্যে কল শিডিউল করুন
+                Schedule Free Call
               </motion.button>
             </div>
           </form>

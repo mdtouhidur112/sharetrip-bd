@@ -11,6 +11,7 @@ import {
   DEFAULT_TRANSPORTS
 } from '../data/travelData';
 import { DEFAULT_ABOUT_PAGE_DATA } from '../data/aboutDefaultData';
+import { initRxdbSync, upsertRxDoc, deleteRxDoc } from '../db/rxdb';
 
 import { 
   supabase, 
@@ -52,6 +53,12 @@ import {
   seoSettingsToRow,
   rowToServicesControl,
   servicesControlToRow,
+  rowToBookingAuditLog,
+  bookingAuditLogToRow,
+  rowToSectionSettings,
+  sectionSettingsToRow,
+  rowToReviewSettings,
+  reviewSettingsToRow,
   removeStorageFiles,
   handlePermanentDelete
 } from './supabaseClient';
@@ -77,6 +84,93 @@ const SOCIAL_LINKS_STORAGE_KEY = 'aetheria_social_links_db';
 const FOOTER_SETTINGS_STORAGE_KEY = 'aetheria_footer_settings_db';
 const SEO_SETTINGS_STORAGE_KEY = 'aetheria_seo_settings_db';
 const SERVICES_CONTROL_STORAGE_KEY = 'aetheria_services_control_db';
+const BOOKING_AUDIT_LOGS_STORAGE_KEY = 'aetheria_booking_audit_logs_db';
+const SECTION_SETTINGS_STORAGE_KEY = 'aetheria_section_settings_db';
+const REVIEW_SETTINGS_STORAGE_KEY = 'aetheria_review_settings_db';
+
+export const DEFAULT_REVIEW_SETTINGS = {
+  id: 'primary',
+  selectedReviewIds: [],
+  selectedReviews: []
+};
+
+export const DEFAULT_SECTION_SETTINGS = {
+  id: 'primary',
+  destinations: {
+    badge: 'Curated Landscapes',
+    title: 'Choose Your Travel Horizon',
+    subtitle: 'Thrilling mountain peaks, serene beach getaways, or peaceful forest retreats.',
+    buttonText: 'All Tour Packages'
+  },
+  popularHotels: {
+    badge: 'Most Popular Bookings',
+    title: 'Most Popular Bookings',
+    subtitle: 'Top-rated luxury hotels and resorts most booked by travelers.'
+  },
+  transportShowcase: {
+    badge: 'Luxury Fleet & Services',
+    title: 'Transport, Hotel & Dining Services',
+    subtitle: 'Private road vehicles, luxury river cruises, air charters, plus 5-star hotels and signature dining.',
+    trustBadge: '100% Verified Service'
+  },
+  howItWorks: {
+    badge: 'Seamless Experience',
+    title: 'How It Works',
+    subtitle: 'Book your dream journey in 3 simple, fast, and secure steps.',
+    step1Title: 'Choose Your Destination',
+    step1Desc: 'Browse curated destinations or select hotels, transport, and dining tailored to your trip.',
+    step2Title: 'Customize Your Plan',
+    step2Desc: 'Select dates, guests, room specs, or meal plans with transparent real-time pricing.',
+    step3Title: 'Confirm & Travel',
+    step3Desc: 'Complete your booking smoothly with instant confirmation and 24/7 concierge support.',
+    ctaText: 'Explore Tours'
+  },
+  coreServices: {
+    badge: 'Our Core Services',
+    title: 'Our Core Services',
+    subtitle: 'Luxury resorts, private transport, and premium dining — all in one place with real-time booking.',
+    trustBadge: 'Real-Time Verified Service'
+  },
+  clientReviews: {
+    badge: 'Verified Traveler Stories',
+    title: 'Client Reviews',
+    subtitle: 'Real experiences from clients who enjoyed memorable and luxury journeys with our trusted service.'
+  },
+  contactSection: {
+    badge: '24/7 Concierge Support',
+    title: 'Contact & Office Info',
+    subtitle: 'Reach out to our Dhaka or New York office anytime for instant trip planning and assistance.',
+    ctaText: 'Book a Call'
+  },
+  servicesPage: {
+    badge: 'All-In-One Travel Hub',
+    title: 'Explore Our Services',
+    subtitle: 'Choose hotels, transport, or restaurant dining — check live availability and pricing to book directly.'
+  },
+  allDestinationsPage: {
+    badge: 'All Destinations',
+    title: 'Explore All Destinations',
+    subtitle: 'Discover our complete collection of curated destinations and exclusive travel packages.'
+  },
+  transportCategoryPage: {
+    badge: 'Transport Fleet',
+    title: 'All Vehicles & Transport Services',
+    subtitle: 'Road, River & Air Routes',
+    description: 'Explore our fleet of premium vehicles and private charters. Contact us directly on WhatsApp or book online.'
+  }
+};
+
+const mergeSectionSettings = (incoming = {}) => {
+  const result = { id: 'primary' };
+  Object.keys(DEFAULT_SECTION_SETTINGS).forEach((key) => {
+    if (key === 'id') return;
+    result[key] = {
+      ...DEFAULT_SECTION_SETTINGS[key],
+      ...(incoming?.[key] && typeof incoming[key] === 'object' ? incoming[key] : {})
+    };
+  });
+  return result;
+};
 
 export const DEFAULT_SERVICES_CONTROL = {
   id: 'primary',
@@ -96,12 +190,12 @@ export const DEFAULT_SEO_SETTINGS = {
   canonicalUrl: '',
   ogTitle: '',
   ogDescription: '',
-  ogImage: '',
+  ogImage: '/stb-logo.png',
   twitterCard: 'summary_large_image',
   twitterSite: '',
   robots: 'index, follow',
   googleVerification: '',
-  schemaOrgName: '',
+  schemaOrgName: 'ShareTrip BD',
   schemaPhone: '',
   schemaAddress: ''
 };
@@ -339,8 +433,49 @@ export const StorageService = {
         window.dispatchEvent(new CustomEvent('app:services-control-updated'));
       }
 
+      // 11j. Booking Audit Logs (Sync from Supabase)
+      const { data: dbAuditLogs, error: auditError } = await supabase
+        .from('booking_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (!auditError && Array.isArray(dbAuditLogs)) {
+        localStorage.setItem(
+          BOOKING_AUDIT_LOGS_STORAGE_KEY,
+          JSON.stringify(dbAuditLogs.map(rowToBookingAuditLog))
+        );
+        window.dispatchEvent(new CustomEvent('app:booking-audit-logs-updated'));
+      }
+
+      // 11k. Section Control CMS (Sync from Supabase)
+      const { data: dbSectionSettings, error: sectionError } = await supabase
+        .from('section_settings')
+        .select('*')
+        .eq('id', 'primary')
+        .maybeSingle();
+      if (!sectionError && dbSectionSettings) {
+        const merged = mergeSectionSettings(rowToSectionSettings(dbSectionSettings));
+        localStorage.setItem(SECTION_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent('app:section-settings-updated'));
+      }
+
+      // 11l. Review Control CMS (Sync from Supabase)
+      const { data: dbReviewSettings, error: reviewSettingsError } = await supabase
+        .from('review_settings')
+        .select('*')
+        .eq('id', 'primary')
+        .maybeSingle();
+      if (!reviewSettingsError && dbReviewSettings) {
+        const mergedRev = { ...DEFAULT_REVIEW_SETTINGS, ...rowToReviewSettings(dbReviewSettings) };
+        localStorage.setItem(REVIEW_SETTINGS_STORAGE_KEY, JSON.stringify(mergedRev));
+        window.dispatchEvent(new CustomEvent('app:review-settings-updated'));
+      }
+
       // 12. Start Persistent Real-Time WebSocket Listeners across all tables
       StorageService.startRealtimeListeners();
+
+      // 13. Start RxDB + Dexie Hybrid Two-Way Sync
+      initRxdbSync().catch((err) => console.warn('RxDB background sync notice:', err));
     } catch (e) {
       console.warn('Supabase sync notice: Operating in resilient cache mode', e);
     }
@@ -516,6 +651,44 @@ export const StorageService = {
             const mergedServicesControl = { ...DEFAULT_SERVICES_CONTROL, ...rowToServicesControl(data) };
             localStorage.setItem(SERVICES_CONTROL_STORAGE_KEY, JSON.stringify(mergedServicesControl));
             window.dispatchEvent(new CustomEvent('app:services-control-updated'));
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_audit_logs' }, async () => {
+          const { data, error } = await supabase
+            .from('booking_audit_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(500);
+          if (!error && Array.isArray(data)) {
+            localStorage.setItem(
+              BOOKING_AUDIT_LOGS_STORAGE_KEY,
+              JSON.stringify(data.map(rowToBookingAuditLog))
+            );
+            window.dispatchEvent(new CustomEvent('app:booking-audit-logs-updated'));
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'section_settings' }, async () => {
+          const { data, error } = await supabase
+            .from('section_settings')
+            .select('*')
+            .eq('id', 'primary')
+            .maybeSingle();
+          if (!error && data) {
+            const merged = mergeSectionSettings(rowToSectionSettings(data));
+            localStorage.setItem(SECTION_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+            window.dispatchEvent(new CustomEvent('app:section-settings-updated'));
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'review_settings' }, async () => {
+          const { data, error } = await supabase
+            .from('review_settings')
+            .select('*')
+            .eq('id', 'primary')
+            .maybeSingle();
+          if (!error && data) {
+            const mergedRev = { ...DEFAULT_REVIEW_SETTINGS, ...rowToReviewSettings(data) };
+            localStorage.setItem(REVIEW_SETTINGS_STORAGE_KEY, JSON.stringify(mergedRev));
+            window.dispatchEvent(new CustomEvent('app:review-settings-updated'));
           }
         })
         .subscribe();
@@ -1917,6 +2090,172 @@ export const StorageService = {
     return updated;
   },
 
+  // -------------------------------------------------------------
+  // BOOKING AUDIT LOGS (CUSTOMER CANCELLATIONS & ADMIN ACTIONS)
+  // -------------------------------------------------------------
+  getBookingAuditLogs: () => {
+    try {
+      const stored = localStorage.getItem(BOOKING_AUDIT_LOGS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (err) {
+      console.warn('Error reading booking audit logs', err);
+    }
+    return [];
+  },
+
+  logBookingAudit: async (entry) => {
+    const newLog = {
+      id: entry?.id || `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      bookingId: entry?.bookingId || '',
+      actionType: entry?.actionType || '',
+      previousStatus: entry?.previousStatus || '',
+      newStatus: entry?.newStatus || '',
+      actorRole: entry?.actorRole || 'customer',
+      actorName: entry?.actorName || '',
+      actorEmail: entry?.actorEmail || '',
+      actorPhone: entry?.actorPhone || '',
+      customerName: entry?.customerName || '',
+      customerEmail: entry?.customerEmail || '',
+      customerPhone: entry?.customerPhone || '',
+      customerWhatsapp: entry?.customerWhatsapp || entry?.customerPhone || '',
+      itemTitle: entry?.itemTitle || '',
+      totalPrice: Number(entry?.totalPrice || 0),
+      details: entry?.details || {},
+      createdAt: entry?.createdAt || new Date().toISOString()
+    };
+
+    const existing = StorageService.getBookingAuditLogs();
+    const updated = [newLog, ...existing].slice(0, 500);
+    localStorage.setItem(BOOKING_AUDIT_LOGS_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('app:booking-audit-logs-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('booking_audit_logs')
+          .upsert(bookingAuditLogToRow(newLog));
+        if (error) console.error('Supabase booking_audit_logs upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase booking_audit_logs save exception:', err);
+      }
+    }
+    return newLog;
+  },
+
+  deleteBookingAuditLog: async (logId) => {
+    const existing = StorageService.getBookingAuditLogs();
+    const updated = existing.filter((item) => item.id !== logId);
+    localStorage.setItem(BOOKING_AUDIT_LOGS_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('app:booking-audit-logs-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('booking_audit_logs').delete().eq('id', logId);
+        if (error) console.error('Supabase booking_audit_logs delete ERROR:', error);
+      } catch (err) {
+        console.error('Supabase booking_audit_logs delete exception:', err);
+      }
+    }
+    return updated;
+  },
+
+  clearBookingAuditLogs: async () => {
+    localStorage.setItem(BOOKING_AUDIT_LOGS_STORAGE_KEY, JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent('app:booking-audit-logs-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('booking_audit_logs').delete().neq('id', '');
+        if (error) console.error('Supabase booking_audit_logs clear ERROR:', error);
+      } catch (err) {
+        console.error('Supabase booking_audit_logs clear exception:', err);
+      }
+    }
+    return [];
+  },
+
+  // -------------------------------------------------------------
+  // SECTION CONTROL CMS (ALL WEBSITE SECTIONS & PAGES TEXT)
+  // -------------------------------------------------------------
+  getSectionSettings: () => {
+    try {
+      const stored = localStorage.getItem(SECTION_SETTINGS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return mergeSectionSettings(parsed);
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored section settings', err);
+    }
+    return DEFAULT_SECTION_SETTINGS;
+  },
+
+  saveSectionSettings: async (sectionData) => {
+    const nextData = mergeSectionSettings(sectionData);
+    localStorage.setItem(SECTION_SETTINGS_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:section-settings-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('section_settings').upsert(sectionSettingsToRow(nextData));
+        if (error) console.error('Supabase section_settings upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase section_settings save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
+  // -------------------------------------------------------------
+  // REVIEW CONTROL CMS (SELECTED USER COMMENTS FOR WEBSITE)
+  // -------------------------------------------------------------
+  getReviewSettings: () => {
+    try {
+      const stored = localStorage.getItem(REVIEW_SETTINGS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            ...DEFAULT_REVIEW_SETTINGS,
+            ...parsed,
+            selectedReviewIds: Array.isArray(parsed.selectedReviewIds) ? parsed.selectedReviewIds : [],
+            selectedReviews: Array.isArray(parsed.selectedReviews) ? parsed.selectedReviews : []
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading stored review settings', err);
+    }
+    return DEFAULT_REVIEW_SETTINGS;
+  },
+
+  saveReviewSettings: async (reviewData) => {
+    const nextData = {
+      ...DEFAULT_REVIEW_SETTINGS,
+      ...(reviewData || {}),
+      id: 'primary',
+      selectedReviewIds: Array.isArray(reviewData?.selectedReviewIds) ? reviewData.selectedReviewIds : [],
+      selectedReviews: Array.isArray(reviewData?.selectedReviews) ? reviewData.selectedReviews : []
+    };
+    localStorage.setItem(REVIEW_SETTINGS_STORAGE_KEY, JSON.stringify(nextData));
+    window.dispatchEvent(new CustomEvent('app:review-settings-updated'));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('review_settings').upsert(reviewSettingsToRow(nextData));
+        if (error) console.error('Supabase review_settings upsert ERROR:', error);
+      } catch (err) {
+        console.error('Supabase review_settings save exception:', err);
+      }
+    }
+    return nextData;
+  },
+
   updateBookingPayment: async (bookingId, { advancePaid, paymentMethod }) => {
     const bookings = StorageService.getBookings();
     let updatedTarget = null;
@@ -2180,44 +2519,59 @@ export const StorageService = {
   },
 
   setUserRole: async (emailOrId, newRole) => {
+    // Only 'normal_admin' or 'user' can be assigned via Admin Control; Root Admin is strictly .env only
+    const safeRole = newRole === 'normal_admin' ? 'normal_admin' : 'user';
     const users = StorageService.getUsers();
     const cleanQuery = String(emailOrId).trim().toLowerCase();
     let updated = false;
 
+    let targetUser = null;
     const newUsers = users.map(u => {
-      if (u.email.toLowerCase() === cleanQuery || u.id === emailOrId) {
+      if ((u.email || '').toLowerCase() === cleanQuery || u.id === emailOrId) {
         updated = true;
-        return { ...u, role: newRole, roleUpdatedAt: new Date().toISOString() };
+        targetUser = {
+          ...u,
+          role: safeRole,
+          tier: safeRole === 'normal_admin' ? 'Normal Admin' : (u.tier === 'Normal Admin' ? 'Standard Voyager' : u.tier),
+          roleUpdatedAt: new Date().toISOString()
+        };
+        return targetUser;
       }
       return u;
     });
 
     if (!updated && cleanQuery.includes('@')) {
-      newUsers.unshift({
+      targetUser = {
         id: `usr-${Date.now()}`,
         name: cleanQuery.split('@')[0],
         email: cleanQuery,
         phone: '',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-        role: newRole,
-        tier: newRole === 'normal_admin' ? 'Normal Admin' : 'Standard Voyager',
-        country: 'বাংলাদেশ 🇧🇩',
+        role: safeRole,
+        tier: safeRole === 'normal_admin' ? 'Normal Admin' : 'Standard Voyager',
+        country: 'Bangladesh',
         status: 'Active',
-        joinedDate: 'আজ যুক্ত হয়েছেন'
-      });
+        joinedDate: 'Joined today'
+      };
+      newUsers.unshift(targetUser);
     }
 
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
     window.dispatchEvent(new CustomEvent('app:users-updated'));
 
-    if (supabase) {
+    if (supabase && targetUser) {
       try {
-        const query = cleanQuery.includes('@')
-          ? supabase.from('users').update({ role: newRole, role_updated_at: new Date().toISOString() }).eq('email', cleanQuery)
-          : supabase.from('users').update({ role: newRole, role_updated_at: new Date().toISOString() }).eq('id', emailOrId);
-        const { error } = await query;
-        if (error) console.error('Supabase role update ERROR:', error);
-        else console.log('Supabase user role updated:', cleanQuery, newRole);
+        const row = userToRow(targetUser);
+        const { error: upsertErr } = await supabase
+          .from('users')
+          .upsert(row, { onConflict: 'email' });
+        if (upsertErr) {
+          const query = cleanQuery.includes('@')
+            ? supabase.from('users').update({ role: safeRole, tier: row.tier, updated_at: new Date().toISOString() }).ilike('email', cleanQuery)
+            : supabase.from('users').update({ role: safeRole, tier: row.tier, updated_at: new Date().toISOString() }).eq('id', emailOrId);
+          const { error: updErr } = await query;
+          if (updErr) console.error('Supabase role update ERROR:', updErr);
+        }
       } catch (err) {
         console.error('Supabase role update exception:', err);
       }

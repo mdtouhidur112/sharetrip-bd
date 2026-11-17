@@ -41,7 +41,10 @@ import {
   Building2,
   ShoppingBag,
   FileText,
-  Search
+  Search,
+  LayoutTemplate,
+  MessageSquareQuote,
+  LogOut
 } from 'lucide-react';
 import { StorageService } from '../../services/storageService';
 import { AdminAuthService, ROOT_ADMIN_PROFILE_KEY } from '../../services/adminAuthService';
@@ -61,16 +64,19 @@ import { AdminContactControl } from './AdminContactControl';
 import { AdminAboutControl } from './AdminAboutControl';
 import { AdminFooterControl } from './AdminFooterControl';
 import { AdminSeoControl } from './AdminSeoControl';
+import { AdminSectionControl } from './AdminSectionControl';
+import { AdminReviewControl } from './AdminReviewControl';
 import { AdminControl } from './AdminControl';
 import { DynamicReactIcon, parseReactIconInput } from '../../utils/reactIconParser';
+import { SyncStatusBadge } from '../SyncStatusBadge';
 
-export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
+export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) => {
   const { effectiveTheme, setThemeMode } = useTheme();
   const { language, setLanguage } = useLanguage();
 
-  // Admin Role Context
+  // Admin Role Context (Strictly verified against .env credentials)
   const currentAdmin = propCurrentAdmin || AdminAuthService.getCurrentAdmin();
-  const isRoot = AdminAuthService.isRootAdmin() || currentAdmin?.role === 'root_admin' || currentAdmin?.isRoot === true;
+  const isRoot = AdminAuthService.isRootAdmin();
 
   // Active navigation tab: 'dashboard' | 'customize-logo' | 'banner-control' | 'post-hotel-package' | 'post-transport' | 'post-restaurant' | 'settings'
   const [activeTab, setActiveTab] = useState(() => {
@@ -850,7 +856,10 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
       activeTab === 'brand-logo-control' ||
       activeTab === 'contact-control' ||
       activeTab === 'about-control' ||
-      activeTab === 'footer-control'
+      activeTab === 'footer-control' ||
+      activeTab === 'seo-control' ||
+      activeTab === 'section-control' ||
+      activeTab === 'review-control'
     ) {
       setIsWebControlOpen(true);
     }
@@ -864,6 +873,13 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
       setIsPostUpdateOpen(true);
     }
   }, [activeTab]);
+
+  // Restrict Root-only tabs for Normal Admin
+  useEffect(() => {
+    if (!isRoot && (activeTab === 'services-control' || activeTab === 'admin-control')) {
+      setActiveTab('dashboard');
+    }
+  }, [isRoot, activeTab]);
 
   // Live Brand Info for Admin Sidebar Header
   const [adminBranding, setAdminBranding] = useState(() => StorageService.getBranding());
@@ -886,6 +902,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
   }, []);
 
   const handleToggleServiceControl = async (serviceKey, serviceLabel) => {
+    if (!isRoot) return;
     const nextEnabled = servicesControl?.[serviceKey] === false;
     const nextState = {
       ...servicesControl,
@@ -1111,21 +1128,13 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
         <div className="flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/70 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              {adminBranding?.logoUrl ? (
-                <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-300 dark:border-slate-700 bg-slate-950/20">
-                  <img 
-                    src={adminBranding.logoUrl} 
-                    alt={adminBranding.brandName || 'Brand Logo'} 
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="relative flex items-center justify-center w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#69EBDA] to-cyan-400 p-[1px] shadow-md shadow-[#69EBDA]/20 shrink-0">
-                  <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center">
-                    <Compass className="w-5 h-5 text-[#69EBDA]" />
-                  </div>
-                </div>
-              )}
+              <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-300 dark:border-slate-700 bg-slate-950/20">
+                <img 
+                  src={adminBranding?.logoUrl || '/stb-logo.png'} 
+                  alt={adminBranding?.brandName || 'STB Brand Logo'} 
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <div className="flex flex-col">
                 <span className="text-sm font-extrabold tracking-wider font-['Outfit',sans-serif] flex items-center gap-1 text-slate-900 dark:text-white">
                   {adminBranding?.brandName || 'AETHERIA'}
@@ -1227,29 +1236,31 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#69EBDA]/40 ml-4 my-1"
                   >
-                    {/* 1. Services Control */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('services-control');
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`
-                        w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
-                        ${activeTab === 'services-control'
-                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
-                          : isLight
-                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Layers className={`w-3.5 h-3.5 ${activeTab === 'services-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
-                        <span>{language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল'}</span>
-                      </div>
-                      {activeTab === 'services-control' && <ChevronRight className="w-3.5 h-3.5" />}
-                    </button>
+                    {/* 1. Services Control (Root Admin Only) */}
+                    {isRoot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('services-control');
+                          setIsSidebarOpen(false);
+                        }}
+                        className={`
+                          w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                          ${activeTab === 'services-control'
+                            ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                            : isLight
+                              ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className={`w-3.5 h-3.5 ${activeTab === 'services-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                          <span>{language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল'}</span>
+                        </div>
+                        {activeTab === 'services-control' && <ChevronRight className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
 
                     {/* 2. Customize Logo */}
                     <button
@@ -1432,6 +1443,58 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
                       )}
                     </button>
+
+                    {/* 8. Section Control */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('section-control');
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                        ${activeTab === 'section-control'
+                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <LayoutTemplate className={`w-3.5 h-3.5 ${activeTab === 'section-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                        <span>{language === 'en' ? 'Section Control' : 'সেকশন কন্ট্রোল'}</span>
+                      </div>
+                      {activeTab === 'section-control' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                      )}
+                    </button>
+
+                    {/* 9. Review Control */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('review-control');
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                        ${activeTab === 'review-control'
+                          ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                          : isLight
+                            ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquareQuote className={`w-3.5 h-3.5 ${activeTab === 'review-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                        <span>{language === 'en' ? 'Review Control' : 'রিভিউ কন্ট্রোল'}</span>
+                      </div>
+                      {activeTab === 'review-control' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                      )}
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1523,31 +1586,33 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
               </AnimatePresence>
             </div>
 
-            {/* 4. Admin Control (Promote/Demote Normal Admin) */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('admin-control');
-                setIsSidebarOpen(false);
-              }}
-              className={`
-                w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
-                ${activeTab === 'admin-control'
-                  ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
-                  : isLight
-                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
-                <UserCog className={`w-4 h-4 ${activeTab === 'admin-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
-                <span>{language === 'en' ? 'Admin Control' : 'অ্যাডমিন কন্ট্রোল'}</span>
-              </div>
-              {activeTab === 'admin-control' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
-              )}
-            </button>
+            {/* 4. Admin Control (Promote/Demote Normal Admin - Root Admin Only) */}
+            {isRoot && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('admin-control');
+                  setIsSidebarOpen(false);
+                }}
+                className={`
+                  w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer
+                  ${activeTab === 'admin-control'
+                    ? 'bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 shadow-md shadow-[#69EBDA]/25 font-black'
+                    : isLight
+                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <UserCog className={`w-4 h-4 ${activeTab === 'admin-control' ? 'text-slate-950' : 'text-[#69EBDA]'}`} />
+                  <span>{language === 'en' ? 'Admin Control' : 'অ্যাডমিন কন্ট্রোল'}</span>
+                </div>
+                {activeTab === 'admin-control' && isRoot && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                )}
+              </button>
+            )}
           </nav>
         </div>
       </aside>
@@ -1588,6 +1653,10 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                 <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                   {activeTab === 'services-control'
                     ? (language === 'en' ? 'Services Control' : 'সার্ভিসেস কন্ট্রোল')
+                    : activeTab === 'section-control'
+                    ? (language === 'en' ? 'Section Control' : 'সেকশন কন্ট্রোল')
+                    : activeTab === 'review-control'
+                    ? (language === 'en' ? 'Review Control' : 'রিভিউ কন্ট্রোল')
                     : activeTab === 'customize-logo'
                     ? (language === 'en' ? 'Customize Logo' : 'কাস্টমাইজ লোগো')
                     : activeTab === 'banner-control'
@@ -1618,6 +1687,9 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                                   ? (language === 'en' ? 'Settings' : 'সিস্টেম কনফিগারেশন')
                                   : (language === 'en' ? 'Dashboard' : 'ড্যাশবোর্ড')}
                 </h1>
+                <div className="hidden sm:inline-flex ml-2">
+                  <SyncStatusBadge compact isLight={isLight} />
+                </div>
               </div>
             </div>
 
@@ -1687,7 +1759,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                       </span>
                     ) : (
                       <span className="px-1.5 py-0.5 rounded-full bg-teal-400/20 text-teal-600 dark:text-teal-300 text-[9px] font-black border border-teal-400/40 flex items-center gap-0.5">
-                        <Shield className="w-2.5 h-2.5" /> ADMIN
+                        <Shield className="w-2.5 h-2.5" /> NORMAL ADMIN
                       </span>
                     )}
                   </div>
@@ -1712,6 +1784,28 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                 aria-label="Admin System Configuration"
               >
                 <Settings className={`w-4 h-4 ${activeTab === 'settings' ? 'text-[#69EBDA]' : 'text-slate-500 hover:text-[#69EBDA]'}`} />
+              </button>
+
+              {/* 5. Admin Exit Button (Icon Only - Logs out session completely) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onExitAdmin) {
+                    onExitAdmin();
+                  } else {
+                    AdminAuthService.logout();
+                    window.location.href = '/';
+                  }
+                }}
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  isLight
+                    ? 'text-rose-500 hover:text-rose-600 hover:bg-rose-50'
+                    : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/15'
+                }`}
+                title="Admin Exit"
+                aria-label="Admin Exit"
+              >
+                <LogOut className="w-4 h-4" />
               </button>
 
             </div>
@@ -4438,6 +4532,8 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
               mode="dashboard"
               language={language}
               isLight={isLight}
+              isRoot={isRoot}
+              currentAdmin={currentAdmin}
               onShowToast={(text) => {
                 setCmsToast({ show: true, text });
                 setTimeout(() => setCmsToast({ show: false, text: '' }), 4000);
@@ -4453,6 +4549,8 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
               mode="customer-order"
               language={language}
               isLight={isLight}
+              isRoot={isRoot}
+              currentAdmin={currentAdmin}
               onShowToast={(text) => {
                 setCmsToast({ show: true, text });
                 setTimeout(() => setCmsToast({ show: false, text: '' }), 4000);
@@ -4505,7 +4603,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
           {/* ========================================================================= */}
           {/* TAB: SERVICES CONTROL (ENABLE / DISABLE CORE SERVICES REALTIME)           */}
           {/* ========================================================================= */}
-          {activeTab === 'services-control' && (
+          {activeTab === 'services-control' && isRoot && (
             <div className={`p-4 sm:p-6 lg:p-8 rounded-3xl border animate-in fade-in duration-300 ${
               isLight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
             }`}>
@@ -4730,9 +4828,36 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
           )}
 
           {/* ========================================================================= */}
+          {/* TAB: SECTION CONTROL (REALTIME WEBSITE SECTIONS & PAGES TEXT CMS)         */}
+          {/* ========================================================================= */}
+          {activeTab === 'section-control' && (
+            <AdminSectionControl
+              isLight={isLight}
+              onShowToast={(text) => {
+                setCmsToast({ show: true, text });
+                setTimeout(() => setCmsToast({ show: false, text: '' }), 4000);
+              }}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: REVIEW CONTROL (SELECT USER COMMENTS FOR WEBSITE REVIEW SECTION)     */}
+          {/* ========================================================================= */}
+          {activeTab === 'review-control' && (
+            <AdminReviewControl
+              isLight={isLight}
+              isRoot={isRoot}
+              onShowToast={(text) => {
+                setCmsToast({ show: true, text });
+                setTimeout(() => setCmsToast({ show: false, text: '' }), 4000);
+              }}
+            />
+          )}
+
+          {/* ========================================================================= */}
           {/* TAB: ADMIN CONTROL (PROMOTE USER TO NORMAL ADMIN / DEMOTE TO USER)       */}
           {/* ========================================================================= */}
-          {activeTab === 'admin-control' && (
+          {activeTab === 'admin-control' && isRoot && (
             <AdminControl
               language={language}
               isLight={isLight}
@@ -4986,26 +5111,28 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin }) => {
                     />
                   </div>
 
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <LinkIcon className="w-3.5 h-3.5 text-[#69EBDA]" />
-                        <span>{language === 'en' ? 'Developer Portfolio Link (Footer)' : 'ডেভেলপার পোর্টফোলিও লিংক (ফুটারের Developer By MD.Touhid)'}</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal">ঐচ্ছিক</span>
-                    </label>
-                    <input
-                      type="url"
-                      value={portfolioUrl}
-                      onChange={(e) => setPortfolioUrl(e.target.value)}
-                      placeholder="https://your-portfolio-link.com"
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-medium border outline-hidden transition-all ${
-                        isLight 
-                          ? 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-[#69EBDA]' 
-                          : 'bg-slate-950/60 border-slate-800 text-slate-100 focus:border-[#69EBDA]'
-                      }`}
-                    />
-                  </div>
+                  {isRoot && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <LinkIcon className="w-3.5 h-3.5 text-[#69EBDA]" />
+                          <span>{language === 'en' ? 'Developer Portfolio Link (Footer)' : 'ডেভেলপার পোর্টফোলিও লিংক (ফুটারের Developer By MD.Touhid)'}</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">ঐচ্ছিক</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={portfolioUrl}
+                        onChange={(e) => setPortfolioUrl(e.target.value)}
+                        placeholder="https://your-portfolio-link.com"
+                        className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-medium border outline-hidden transition-all ${
+                          isLight 
+                            ? 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-[#69EBDA]' 
+                            : 'bg-slate-950/60 border-slate-800 text-slate-100 focus:border-[#69EBDA]'
+                        }`}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Save Button */}

@@ -21,6 +21,7 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
   const [hotels, setHotels] = useState(() => StorageService.getHotels());
   const [restaurants, setRestaurants] = useState(() => StorageService.getRestaurants());
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().transportShowcase);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollContainerRef = useRef(null);
 
@@ -31,18 +32,21 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       setHotels(StorageService.getHotels());
       setRestaurants(StorageService.getRestaurants());
       setServicesControl(StorageService.getServicesControl());
+      setSecText(StorageService.getSectionSettings().transportShowcase);
     };
     window.addEventListener('app:transports-updated', handleSync);
     window.addEventListener('app:transport-categories-updated', handleSync);
     window.addEventListener('app:hotels-updated', handleSync);
     window.addEventListener('app:restaurants-updated', handleSync);
     window.addEventListener('app:services-control-updated', handleSync);
+    window.addEventListener('app:section-settings-updated', handleSync);
     return () => {
       window.removeEventListener('app:transports-updated', handleSync);
       window.removeEventListener('app:transport-categories-updated', handleSync);
       window.removeEventListener('app:hotels-updated', handleSync);
       window.removeEventListener('app:restaurants-updated', handleSync);
       window.removeEventListener('app:services-control-updated', handleSync);
+      window.removeEventListener('app:section-settings-updated', handleSync);
     };
   }, []);
 
@@ -68,15 +72,15 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       const availableCount = isCatDisabled ? 0 : transports.filter((t) => t.category === cat.id).length;
       return {
         ...cat,
-        countLabel: isCatDisabled ? 'Currently Off' : `${availableCount} টি বাহন উপলব্ধ`,
-        ctaLabel: 'বাহনসমূহ দেখুন',
+        countLabel: isCatDisabled ? 'Currently Off' : `${availableCount} Vehicles Available`,
+        ctaLabel: 'View Vehicles',
         onClick: () => onSelectCategory?.(cat.id)
       };
     }),
     {
       id: 'hotel-services',
       name: 'Hotel Services',
-      subtitle: 'লাক্সারি হোটেল ও রিসোর্ট',
+      subtitle: 'Luxury Hotels & Resorts',
       badge: 'Hotel Services',
       icon: 'Hotel',
       photo:
@@ -86,15 +90,15 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
             hotels[0]?.photo ||
             'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80',
       description:
-        'প্রিমিয়াম রিসোর্ট, ওভারওয়াটার ভিলা ও ৫-তারকা হোটেল রুম বুকিং সুবিধা রিয়েলটাইম প্রাইস ও রিভিউসহ।',
-      countLabel: servicesControl?.hotels === false ? 'Currently Off' : `${hotels.length} টি হোটেল উপলব্ধ`,
-      ctaLabel: 'হোটেলসমূহ দেখুন',
+        'Premium resorts, overwater villas & 5-star hotel room booking with real-time pricing and reviews.',
+      countLabel: servicesControl?.hotels === false ? 'Currently Off' : `${hotels.length} Hotels Available`,
+      ctaLabel: 'View Hotels',
       onClick: () => onSelectService?.('hotels')
     },
     {
       id: 'restaurant-services',
       name: 'Restaurant Services',
-      subtitle: 'ফাইন ডাইনিং ও বুফে',
+      subtitle: 'Fine Dining & Buffet',
       badge: 'Restaurant Services',
       icon: 'UtensilsCrossed',
       photo:
@@ -104,9 +108,9 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
             restaurants[0]?.defaultPhoto ||
             'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80',
       description:
-        'লাইভ সি-ফুড বারবিকিউ, ৩-বেলা ফুল-বোর্ড মিল প্ল্যান ও এক্সক্লুসিভ ডাইনিং টেবিল বুকিং সেবা।',
-      countLabel: servicesControl?.restaurant === false ? 'Currently Off' : `${restaurants.length} টি মেনু উপলব্ধ`,
-      ctaLabel: 'ডাইনিং দেখুন',
+        'Live seafood BBQ, 3-time full-board meal plans & exclusive dining table reservations.',
+      countLabel: servicesControl?.restaurant === false ? 'Currently Off' : `${restaurants.length} Menus Available`,
+      ctaLabel: 'View Dining',
       onClick: () => onSelectService?.('restaurant')
     }
   ];
@@ -142,24 +146,32 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4 relative z-10">
         <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-800 dark:text-[#69EBDA] uppercase">
-            <Compass className="w-3.5 h-3.5" />
-            যানবাহন ও প্রিমিয়াম সেবাসমূহ
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-            Luxury Transportation &amp; Services
-          </h2>
-          <p className="mt-2 text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-2xl font-medium">
-            সড়ক, নদী, আকাশ পথের যানবাহনসহ হোটেল ও রেস্টুরেন্ট সেবা—বাম থেকে ডানে স্ক্রল করে পছন্দের সার্ভিস বেছে নিন।
-          </p>
+          {secText?.badge && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-800 dark:text-[#69EBDA] uppercase">
+              <Compass className="w-3.5 h-3.5" />
+              {secText.badge}
+            </div>
+          )}
+          {secText?.title && (
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+              {secText.title}
+            </h2>
+          )}
+          {secText?.subtitle && (
+            <p className="mt-2 text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-2xl font-medium">
+              {secText.subtitle}
+            </p>
+          )}
         </div>
 
         {/* Controls: Shield Badge + Left/Right Switch Arrows */}
         <div className="flex items-center gap-3 self-start md:self-end">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold px-3.5 py-2 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 backdrop-blur-md shadow-xs">
-            <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
-            <span>১০০% নিরাপদ সেবা</span>
-          </div>
+          {secText?.trustBadge && (
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-bold px-3.5 py-2 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 backdrop-blur-md shadow-xs">
+              <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
+              <span>{secText.trustBadge}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -235,7 +247,7 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
               {/* Top Badge: Category tag */}
               <div className="absolute top-3 left-3">
                 <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-slate-950/80 text-[#69EBDA] border border-[#69EBDA]/40 backdrop-blur-md">
-                  {cat.badge || cat.subtitle || 'ক্যাটাগরি'}
+                  {cat.badge || cat.subtitle || 'Category'}
                 </span>
               </div>
 
@@ -258,7 +270,7 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#69EBDA]" />
                   <span className="text-xs text-teal-600 dark:text-[#69EBDA] font-bold">
-                    {cat.subtitle || 'এক্সক্লুসিভ সার্ভিস'}
+                    {cat.subtitle || 'Exclusive Service'}
                   </span>
                 </div>
 
@@ -274,7 +286,7 @@ export const TransportShowcaseSection = ({ onSelectCategory, onSelectService }) 
               {/* Bottom Action Button */}
               <div className="pt-4 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                  আলাদা পেজে বিস্তারিত দেখুন
+                  View details on dedicated page
                 </span>
                 <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/10 group-hover:bg-gradient-to-r group-hover:from-[#69EBDA] group-hover:to-teal-400 text-slate-800 dark:text-white group-hover:text-slate-950 font-bold text-xs transition-all duration-200">
                   <span>{cat.ctaLabel}</span>

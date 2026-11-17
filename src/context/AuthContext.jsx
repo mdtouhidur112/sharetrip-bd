@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }) => {
           phone: dbUserProfile?.phone || firebaseUser.phoneNumber || localProfile.phone || '+8801700000000',
           avatar: dbUserProfile?.avatar || localProfile.avatar || firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
           role: isNormalAdmin ? 'normal_admin' : (localProfile.role || 'client'),
-          membership: isNormalAdmin ? 'নরমাল অ্যাডমিন' : (localProfile.membership || 'সদস্য পরিব্রাজক'),
+          membership: isNormalAdmin ? 'Standard Admin' : (localProfile.membership || 'Member Voyager'),
           joinedDate: localProfile.joinedDate || 'Firebase Verified',
           isFirebaseUser: true
         };
@@ -229,8 +229,8 @@ export const AuthProvider = ({ children }) => {
         phone: fbUser.phoneNumber || '+8801700000000',
         avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
         role: isNormalAdmin ? 'normal_admin' : 'client',
-        membership: isNormalAdmin ? 'নরমাল অ্যাডমিন' : 'VIP Voyager',
-        joinedDate: 'আজ লগইন করেছেন',
+        membership: isNormalAdmin ? 'Standard Admin' : 'VIP Voyager',
+        joinedDate: 'Logged in today',
         isFirebaseUser: true
       };
 
@@ -273,8 +273,8 @@ export const AuthProvider = ({ children }) => {
         phone: (phone || '').trim(),
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
         role: isNormalAdmin ? 'normal_admin' : 'client',
-        membership: isNormalAdmin ? 'নরমাল অ্যাডমিন' : 'Silver Explorer',
-        joinedDate: 'আজ নিবন্ধিত',
+        membership: isNormalAdmin ? 'Standard Admin' : 'Silver Explorer',
+        joinedDate: 'Registered today',
         isFirebaseUser: true
       };
 
@@ -308,7 +308,7 @@ export const AuthProvider = ({ children }) => {
         phone: fbUser.phoneNumber || '+8801912987654',
         avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
         role: isNormalAdmin ? 'normal_admin' : 'client',
-        membership: isNormalAdmin ? 'নরমাল অ্যাডমিন' : 'Google Verified Voyager',
+        membership: isNormalAdmin ? 'Standard Admin' : 'Google Verified Voyager',
         joinedDate: 'Verified via Google',
         isFirebaseUser: true
       };
@@ -349,7 +349,7 @@ export const AuthProvider = ({ children }) => {
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
       role: 'client',
       membership: 'Verified Mobile Member',
-      joinedDate: 'আজ যোগদান করেছেন'
+      joinedDate: 'Joined today'
     };
 
     setUser(phoneUser);

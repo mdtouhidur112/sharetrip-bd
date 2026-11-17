@@ -144,6 +144,8 @@ export const extractAllMediaUrlsFromItem = (item) => {
   if (!item || typeof item !== 'object') return urls;
 
   if (item.image && typeof item.image === 'string') urls.push(item.image);
+  if (item.photo && typeof item.photo === 'string') urls.push(item.photo);
+  if (item.defaultPhoto && typeof item.defaultPhoto === 'string') urls.push(item.defaultPhoto);
   if (item.avatar && typeof item.avatar === 'string') urls.push(item.avatar);
   if (item.videoUrl && typeof item.videoUrl === 'string') urls.push(item.videoUrl);
 
@@ -151,6 +153,23 @@ export const extractAllMediaUrlsFromItem = (item) => {
     item.gallery.forEach(g => {
       if (g && typeof g === 'object' && g.url) urls.push(g.url);
       else if (typeof g === 'string') urls.push(g);
+    });
+  }
+
+  if (Array.isArray(item.galleryPhotos)) {
+    item.galleryPhotos.forEach(g => {
+      if (typeof g === 'string') urls.push(g);
+      else if (g && typeof g === 'object' && g.url) urls.push(g.url);
+    });
+  }
+
+  if (item.mealMenus && typeof item.mealMenus === 'object') {
+    ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+      if (Array.isArray(item.mealMenus[meal])) {
+        item.mealMenus[meal].forEach(m => {
+          if (m && typeof m === 'object' && m.photo) urls.push(m.photo);
+        });
+      }
     });
   }
 
@@ -787,9 +806,9 @@ export const adminProfileToRow = (p) => ({
 // 9. Hero Banner & Web Control
 export const rowToHeroBanner = (r) => ({
   id: r?.id || 'primary',
-  headline: r?.headline || 'সবার মুখে মুখে ফেরা',
-  headlineHighlight: r?.headline_highlight || 'স্বপ্নের ভ্রমণ অভিজ্ঞতা',
-  subtitle: r?.subtitle || 'শীর্ষস্থানীয় ট্রাভেল স্থপতিদের নিখুঁত পরিকল্পনায় অংশ নিন নান্দনিক অ্যাডভেঞ্চার, নিরিবিলি লাক্সারি রিসোর্ট ও খাঁটি সাংস্কৃতিক অভিজ্ঞতায়।',
+  headline: r?.headline ?? 'Unforgettable & Iconic',
+  headlineHighlight: r?.headline_highlight ?? 'Dream Travel Experience',
+  subtitle: r?.subtitle ?? 'Join precision-crafted itineraries designed by premier travel experts for aesthetic adventures, serene luxury resorts, and authentic cultural journeys.',
   headlineSize: r?.headline_size || '4xl',
   headlineColor: r?.headline_color || '#FFFFFF',
   headlineBold: r?.headline_bold !== false,
@@ -820,7 +839,7 @@ export const heroBannerToRow = (b) => ({
 // 10. Branding & Logo Settings
 export const rowToBranding = (r) => ({
   id: r?.id || 'primary',
-  logoUrl: r?.logo_url || '',
+  logoUrl: r?.logo_url || '/stb-logo.png',
   logoType: r?.logo_type || 'both',
   logoWidth: Number(r?.logo_width) || 40,
   logoHeight: Number(r?.logo_height) || 40,
@@ -1070,5 +1089,72 @@ export const rowToServicesControl = (r) => ({
 export const servicesControlToRow = (servicesData) => ({
   id: 'primary',
   data: servicesData || {},
+  updated_at: new Date().toISOString()
+});
+
+// 19. Booking Audit Logs (Customer Cancellations & Admin Actions)
+export const rowToBookingAuditLog = (r) => ({
+  id: r?.id || '',
+  bookingId: r?.booking_id || '',
+  actionType: r?.action_type || '',
+  previousStatus: r?.previous_status || '',
+  newStatus: r?.new_status || '',
+  actorRole: r?.actor_role || '',
+  actorName: r?.actor_name || '',
+  actorEmail: r?.actor_email || '',
+  actorPhone: r?.actor_phone || '',
+  customerName: r?.customer_name || '',
+  customerEmail: r?.customer_email || '',
+  customerPhone: r?.customer_phone || '',
+  customerWhatsapp: r?.customer_whatsapp || '',
+  itemTitle: r?.item_title || '',
+  totalPrice: Number(r?.total_price || 0),
+  details: r?.details || {},
+  createdAt: r?.created_at || new Date().toISOString()
+});
+
+export const bookingAuditLogToRow = (log) => ({
+  id: log?.id || `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  booking_id: log?.bookingId || '',
+  action_type: log?.actionType || '',
+  previous_status: log?.previousStatus || '',
+  new_status: log?.newStatus || '',
+  actor_role: log?.actorRole || '',
+  actor_name: log?.actorName || '',
+  actor_email: log?.actorEmail || '',
+  actor_phone: log?.actorPhone || '',
+  customer_name: log?.customerName || '',
+  customer_email: log?.customerEmail || '',
+  customer_phone: log?.customerPhone || '',
+  customer_whatsapp: log?.customerWhatsapp || '',
+  item_title: log?.itemTitle || '',
+  total_price: Number(log?.totalPrice || 0),
+  details: log?.details || {},
+  created_at: log?.createdAt || new Date().toISOString()
+});
+
+// 20. Section Control CMS
+export const rowToSectionSettings = (r) => ({
+  ...(r?.data || {}),
+  id: r?.id || 'primary',
+  updatedAt: r?.updated_at || new Date().toISOString()
+});
+
+export const sectionSettingsToRow = (sectionData) => ({
+  id: 'primary',
+  data: sectionData || {},
+  updated_at: new Date().toISOString()
+});
+
+// 21. Review Control CMS
+export const rowToReviewSettings = (r) => ({
+  ...(r?.data || {}),
+  id: r?.id || 'primary',
+  updatedAt: r?.updated_at || new Date().toISOString()
+});
+
+export const reviewSettingsToRow = (reviewData) => ({
+  id: 'primary',
+  data: reviewData || {},
   updated_at: new Date().toISOString()
 });

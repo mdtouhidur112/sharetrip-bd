@@ -87,13 +87,13 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#69EBDA]/20 text-[#69EBDA] text-xs font-bold mb-2 border border-[#69EBDA]/40">
                   <Briefcase className="w-3.5 h-3.5" />
-                  <span>ব্যক্তিগত ভ্রমণ পরিকল্পনা ও রেকর্ড</span>
+                  <span>Personal Travel Plans & Records</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
-                  আমার বুকিং ও অনুসন্ধান
+                  My Bookings & Inquiries
                 </h3>
                 <p className="text-xs text-slate-100 dark:text-slate-400 mt-1 font-medium">
-                  {user?.name || 'ভ্রমণকারী'} ({user?.email}) অ্যাকাউন্টের অধীনে সক্রিয় বুকিং তালিকা
+                  Active bookings under {user?.name || 'Traveler'} ({user?.email})
                 </p>
               </div>
 
@@ -119,11 +119,11 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
                 }
               `}
             >
-              {type === 'all' ? 'সব অনুরোধ' : type === 'booking' ? 'নিশ্চিতকৃত বুকিং' : 'সরাসরি অনুসন্ধান'}
+              {type === 'all' ? 'All Requests' : type === 'booking' ? 'Confirmed Bookings' : 'Direct Inquiries'}
             </button>
           ))}
           <span className="ml-auto text-xs text-slate-300 font-mono">
-            {displayed.length}টি রেকর্ড
+            {displayed.length} records
           </span>
         </div>
 
@@ -132,8 +132,8 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
           {displayed.length === 0 ? (
             <div className="text-center py-12 text-slate-200 dark:text-slate-400">
               <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#69EBDA]" />
-              <p className="text-sm font-semibold text-white">এই ক্যাটাগরিতে কোনো বুকিং বা অনুসন্ধান পাওয়া যায়নি।</p>
-              <p className="text-xs mt-1 text-slate-200">আপনার পরবর্তী ভ্রমণের জন্য আমাদের নির্বাচিত ট্যুর প্যাকেজগুলো দেখুন।</p>
+              <p className="text-sm font-semibold text-white">No bookings or inquiries found in this category.</p>
+              <p className="text-xs mt-1 text-slate-200">Explore our curated tour packages for your next journey.</p>
             </div>
           ) : (
             displayed.map((item) => (
@@ -145,7 +145,7 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#69EBDA]/20 text-[#69EBDA] border border-[#69EBDA]/40">
-                        {item.type === 'booking' ? 'বুকিং' : 'অনুসন্ধান'}
+                        {item.type === 'booking' ? 'Booking' : 'Inquiry'}
                       </span>
                       <span className="text-xs font-mono text-slate-300 dark:text-slate-400">
                         {item.id}
@@ -167,34 +167,34 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
                     }
                   `}>
                     <span className="w-2 h-2 rounded-full bg-current" />
-                    {item.status === 'Confirmed' ? 'নিশ্চিত' : item.status === 'Contacted' ? 'যোগাযোগ সম্পন্ন' : 'প্রক্রিয়াধীন'}
+                    {item.status === 'Confirmed' ? 'Confirmed' : item.status === 'Contacted' ? 'Contacted' : 'Processing'}
                   </span>
                 </div>
 
                 {/* Details Row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-white/15 dark:border-white/10 text-xs">
                   <div>
-                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">ভ্রমণের তারিখ</span>
+                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">Travel Date</span>
                     <span className="font-semibold text-white flex items-center gap-1 mt-0.5">
                       <Calendar className="w-3.5 h-3.5 text-[#69EBDA]" />
                       {item.travelDate}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">ভ্রমণকারী সংখ্যা</span>
+                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">Travelers</span>
                     <span className="font-semibold text-white flex items-center gap-1 mt-0.5">
                       <Users className="w-3.5 h-3.5 text-[#69EBDA]" />
-                      {item.travelers} জন ভ্রমণকারী
+                      {item.travelers} Traveler(s)
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">মোট খরচ</span>
+                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">Total Cost</span>
                     <span className="font-bold text-white mt-0.5 block">
                       {item.totalPrice}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">অনুরোধের সময়</span>
+                    <span className="text-slate-300 dark:text-slate-400 block text-[10px] uppercase font-bold">Request Time</span>
                     <span className="text-slate-200 dark:text-slate-400 text-[11px] mt-0.5 block">
                       {new Date(item.timestamp).toLocaleDateString()}
                     </span>
@@ -214,7 +214,7 @@ export const UserBookingsModal = ({ isOpen, onClose, onViewPackage }) => {
                     className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>হোয়াটসঅ্যাপ কনসিয়ার্জ</span>
+                    <span>WhatsApp Concierge</span>
                   </button>
                 </div>
               </div>
@@ -258,13 +258,13 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#69EBDA]/20 text-[#69EBDA] text-xs font-bold mb-2 border border-[#69EBDA]/40">
                   <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-                  <span>পছন্দের ভ্রমণ তালিকা</span>
+                  <span>Saved Travel Wishlist</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
-                  সংরক্ষিত আইটেমসমূহ ({totalCount})
+                  Saved Items ({totalCount})
                 </h3>
                 <p className="text-xs text-slate-100 dark:text-slate-400 mt-1 font-medium">
-                  আপনার ভবিষ্যৎ ভ্রমণের জন্য সংরক্ষিত বিশেষ ট্যুর ও হোটেলসমূহ।
+                  Exclusive tours & hotels saved for your upcoming journeys.
                 </p>
               </div>
 
@@ -281,8 +281,8 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
           {totalCount === 0 ? (
             <div className="text-center py-12 text-slate-200 dark:text-slate-400">
               <Heart className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#69EBDA]" />
-              <p className="text-sm font-semibold text-white">আপনার পছন্দের তালিকা বর্তমানে খালি।</p>
-              <p className="text-xs mt-1 text-slate-200">ভবিষ্যতে দেখার জন্য যেকোনো প্যাকেজ বা হোটেল কার্ডের হার্ট আইকনে ক্লিক করে সংরক্ষণ করুন।</p>
+              <p className="text-sm font-semibold text-white">Your wishlist is currently empty.</p>
+              <p className="text-xs mt-1 text-slate-200">Click the heart icon on any package or hotel card to save it for later.</p>
             </div>
           ) : (
             <>
@@ -300,7 +300,7 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
                   <div className="flex-1 text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#69EBDA]">
-                        {pkg.category || 'ট্যুর প্যাকেজ'}
+                        {pkg.category || 'Tour Package'}
                       </span>
                       <span className="text-white/40">•</span>
                       <span className="text-xs text-slate-300 dark:text-slate-400">{pkg.duration}</span>
@@ -309,7 +309,7 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
                       {pkg.shortTitle || pkg.title}
                     </h4>
                     <div className="text-xs font-semibold text-[#69EBDA] mt-0.5">
-                      ${pkg.price} <span className="text-slate-300 font-normal">{pkg.priceNote || '/ জন'}</span>
+                      ${pkg.price} <span className="text-slate-300 font-normal">{pkg.priceNote || '/ person'}</span>
                     </div>
                   </div>
 
@@ -321,14 +321,14 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
                       }}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-[#69EBDA]/20 flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>ভ্রমণ পরিকল্পনা দেখুন</span>
+                      <span>View Itinerary</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
 
                     <button
                       onClick={() => toggleWishlist(pkg.id)}
                       className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
-                      title="সংরক্ষণ থেকে মুছুন"
+                      title="Remove from saved"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -365,8 +365,8 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
                       {hotel.name}
                     </h4>
                     <div className="text-xs font-semibold text-[#69EBDA] mt-0.5">
-                      ৳ {Number(hotel.bookingPrice ?? hotel.pricePerNight ?? 0).toLocaleString('en-IN')}{' '}
-                      <span className="text-slate-300 font-normal">/ {hotel.bookingDays || '১ দিন'}</span>
+                      BDT {Number(hotel.bookingPrice ?? hotel.pricePerNight ?? 0).toLocaleString('en-IN')}{' '}
+                      <span className="text-slate-300 font-normal">/ {hotel.bookingDays || '1 day'}</span>
                     </div>
                   </div>
 
@@ -378,14 +378,14 @@ export const WishlistModal = ({ isOpen, onClose, onViewPackage, onSelectHotel })
                       }}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-[#69EBDA]/20 flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>হোটেল বিস্তারিত দেখুন</span>
+                      <span>View Hotel Details</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
 
                     <button
                       onClick={() => toggleWishlist(hotel.id)}
                       className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
-                      title="সংরক্ষণ থেকে মুছুন"
+                      title="Remove from saved"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -468,46 +468,46 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
       avatar,
       passportCountry
     });
-    showStatus('প্রোফাইল তথ্য ও ছবি সফলভাবে আপডেট করা হয়েছে!');
+    showStatus('Profile info and picture updated successfully!');
   };
 
   // 2. Save Email / Phone Credentials
   const handleSaveCredentials = (e) => {
     e.preventDefault();
     if (!email.trim() || !email.includes('@')) {
-      showStatus('অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা দিন।', 'error');
+      showStatus('Please provide a valid email address.', 'error');
       return;
     }
     if (!phone.trim() || phone.length < 8) {
-      showStatus('অনুগ্রহ করে একটি সঠিক ফোন নম্বর দিন।', 'error');
+      showStatus('Please provide a valid phone number.', 'error');
       return;
     }
     updateProfile({
       email: email.trim(),
       phone: phone.trim()
     });
-    showStatus('ইমেইল ও হোয়াটসঅ্যাপ নম্বর সফলভাবে আপডেট করা হয়েছে!');
+    showStatus('Email and WhatsApp number updated successfully!');
   };
 
   // 3. Update Password
   const handleUpdatePassword = (e) => {
     e.preventDefault();
     if (!currentPassword) {
-      showStatus('অনুগ্রহ করে আপনার বর্তমান পাসওয়ার্ডটি দিন।', 'error');
+      showStatus('Please enter your current password.', 'error');
       return;
     }
     if (newPassword.length < 6) {
-      showStatus('নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।', 'error');
+      showStatus('New password must be at least 6 characters long.', 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
-      showStatus('নতুন পাসওয়ার্ড ও নিশ্চিতকরণ পাসওয়ার্ড মেলেনি।', 'error');
+      showStatus('New password and confirmation password do not match.', 'error');
       return;
     }
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
-    showStatus('পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!');
+    showStatus('Password changed successfully!');
   };
 
   // 4. Send Forgot Password Reset Link
@@ -515,7 +515,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
     setIsResetSending(true);
     setTimeout(() => {
       setIsResetSending(false);
-      showStatus(`${user?.email || email} ঠিকানায় পাসওয়ার্ড রিসেট লিংক ও নির্দেশাবলী পাঠানো হয়েছে!`);
+      showStatus(`Password reset link and instructions sent to ${user?.email || email}!`);
     }, 900);
   };
 
@@ -527,7 +527,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
     } catch (err) {
       console.warn(err);
     }
-    showStatus('যোগাযোগ ও নোটিফিকেশন সেটিংস সংরক্ষিত হয়েছে!');
+    showStatus('Communication & notification settings saved!');
   };
 
   return (
@@ -547,13 +547,13 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#69EBDA]/20 text-[#69EBDA] text-xs font-bold mb-1.5 border border-[#69EBDA]/40">
                   <Settings className="w-3.5 h-3.5" />
-                  <span>ভ্রমণকারী কন্ট্রোল হাব</span>
+                  <span>Traveler Control Hub</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
-                  অ্যাকাউন্ট ও ওয়েবসাইট সেটিংস
+                  Account & Website Settings
                 </h3>
                 <p className="text-xs text-slate-100 dark:text-slate-400 mt-0.5 font-medium">
-                  লগইন তথ্য, নিরাপত্তা, ইমেইল, হোয়াটসঅ্যাপ এবং ওয়েবসাইট সেটিংস পরিবর্তন করুন।
+                  Manage your login credentials, security, email, WhatsApp, and website preferences.
                 </p>
               </div>
 
@@ -584,19 +584,19 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
 
               <div className="text-right hidden sm:block">
                 <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#69EBDA]/20 text-[#69EBDA] border border-[#69EBDA]/35">
-                  {user?.membership || 'ভিআইপি ভ্রমণকারী'}
+                  {user?.membership || 'VIP Voyager'}
                 </span>
-                <div className="text-[10px] text-slate-300 dark:text-slate-400 font-mono mt-1">আইডি: {user?.id}</div>
+                <div className="text-[10px] text-slate-300 dark:text-slate-400 font-mono mt-1">ID: {user?.id}</div>
               </div>
             </div>
 
             {/* Settings Tab Navigation */}
             <div className="px-5 sm:px-7 py-2.5 bg-slate-800/40 dark:bg-slate-950/60 border-b border-white/15 dark:border-white/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
               {[
-                { id: 'general', label: 'ব্যক্তিগত তথ্য ও প্রোফাইল', icon: User },
-                { id: 'credentials', label: 'ইমেইল ও হোয়াটসঅ্যাপ', icon: Mail },
-                { id: 'security', label: 'পাসওয়ার্ড ও নিরাপত্তা', icon: Lock },
-                { id: 'preferences', label: 'ওয়েবসাইট নোটিফিকেশন', icon: Globe }
+                { id: 'general', label: 'Personal Info & Profile', icon: User },
+                { id: 'credentials', label: 'Email & WhatsApp', icon: Mail },
+                { id: 'security', label: 'Password & Security', icon: Lock },
+                { id: 'preferences', label: 'Website Notifications', icon: Globe }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -642,7 +642,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300 flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5 text-[#69EBDA]" />
-                        <span>প্রোফাইল ছবি (ডিভাইস থেকে আপলোড বা ওয়েব লিংক)</span>
+                        <span>Profile Photo (Upload from device or web link)</span>
                       </label>
                       {avatar && (
                         <button
@@ -650,7 +650,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                           onClick={() => setAvatar('')}
                           className="text-[10px] text-rose-400 hover:underline font-bold cursor-pointer"
                         >
-                          রিসেট
+                          Reset
                         </button>
                       )}
                     </div>
@@ -669,7 +669,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                         {/* 1. Device File Upload */}
                         <label className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-white cursor-pointer transition-all">
                           <Upload className="w-3.5 h-3.5 text-[#69EBDA]" />
-                          <span>{isUploadingAvatar ? 'আপলোড হচ্ছে...' : 'ডিভাইস থেকে ছবি আপলোড করুন'}</span>
+                          <span>{isUploadingAvatar ? 'Uploading...' : 'Upload photo from device'}</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -685,10 +685,10 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                                 if (uploadedUrl) {
                                   setAvatar(uploadedUrl);
                                   await updateProfile({ avatar: uploadedUrl });
-                                  showStatus('প্রোফাইল ছবি ডাটাবেজে সেভ করা হয়েছে!');
+                                  showStatus('Profile picture saved to database!');
                                 }
                               } catch (err) {
-                                showStatus(`আপলোড ব্যর্থ হয়েছে: ${err?.message || 'আবার চেষ্টা করুন'}`);
+                                showStatus(`Upload failed: ${err?.message || 'Please try again'}`);
                               } finally {
                                 setIsUploadingAvatar(false);
                                 e.target.value = '';
@@ -704,7 +704,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                             type="url"
                             value={avatarLink}
                             onChange={(e) => setAvatarLink(e.target.value)}
-                            placeholder="অথবা ছবির সরাসরি URL লিংক পেস্ট করুন (https://...)"
+                            placeholder="Or paste direct image URL (https://...)"
                             className="w-full pl-8 pr-16 py-1.5 text-xs rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder:text-slate-400 focus:outline-none focus:border-[#69EBDA]"
                           />
                           <button
@@ -713,12 +713,12 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                               if (avatarLink.trim()) {
                                 setAvatar(avatarLink.trim());
                                 setAvatarLink('');
-                                showStatus('ছবির URL সফলভাবে যুক্ত করা হয়েছে!');
+                                showStatus('Image URL added successfully!');
                               }
                             }}
                             className="absolute right-1 px-2.5 py-1 rounded-lg bg-[#69EBDA] text-slate-950 font-extrabold text-[10px] cursor-pointer"
                           >
-                            প্রয়োগ
+                            Apply
                           </button>
                         </div>
                       </div>
@@ -727,7 +727,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
 
                   <div className="space-y-1">
                     <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300">
-                      আপনার পূর্ণ নাম
+                      Your Full Name
                     </label>
                     <div className="relative flex items-center">
                       <User className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -743,7 +743,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
 
                   <div className="space-y-1">
                     <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300">
-                      পাসপোর্টের দেশ / জাতীয়তা
+                      Passport Country / Nationality
                     </label>
                     <div className="relative flex items-center">
                       <MapPin className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -763,7 +763,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     className="w-full py-3 px-4 min-h-[46px] rounded-2xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 text-slate-950 font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer mt-4"
                   >
                     <Check className="w-4 h-4 text-slate-950" />
-                    <span>প্রোফাইল পরিবর্তন সংরক্ষণ করুন</span>
+                    <span>Save Profile Changes</span>
                   </motion.button>
                 </form>
               )}
@@ -774,17 +774,17 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
               {activeTab === 'credentials' && (
                 <form onSubmit={handleSaveCredentials} className="space-y-5">
                   <div className="p-3.5 rounded-2xl bg-[#69EBDA]/15 border border-[#69EBDA]/30 text-xs text-white">
-                    <span className="font-bold text-[#69EBDA] block mb-1">সরাসরি যোগাযোগ ও নোটিফিকেশন চ্যানেল</span>
-                    সমস্ত বুকিং বিবরণ, ভ্রমণ পরিকল্পনা ও টিকিট এই ইমেইল এবং হোয়াটসঅ্যাপ নম্বরে পাঠানো হবে।
+                    <span className="font-bold text-[#69EBDA] block mb-1">Direct Communication & Notification Channels</span>
+                    All booking confirmations, travel itineraries, and tickets will be delivered to this email and WhatsApp number.
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300">
-                        জিমেইল / ইমেইল ঠিকানা
+                        Email / Gmail Address
                       </label>
                       <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-                        <Check className="w-3 h-3" /> যাচাইকৃত চ্যানেল
+                        <Check className="w-3 h-3" /> Verified Channel
                       </span>
                     </div>
                     <div className="relative flex items-center">
@@ -803,9 +803,9 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300">
-                        ফোন / হোয়াটসঅ্যাপ নম্বর
+                        Phone / WhatsApp Number
                       </label>
-                      <span className="text-[10px] text-[#69EBDA] font-bold">কান্ট্রি কোড সহ</span>
+                      <span className="text-[10px] text-[#69EBDA] font-bold">With Country Code</span>
                     </div>
                     <div className="relative flex items-center">
                       <Phone className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -814,7 +814,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+৮৮০ ১৭১২-৩৪৫৬৭৮"
+                        placeholder="+880 1712-345678"
                         className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 text-white text-xs sm:text-sm font-bold focus:outline-none focus:border-[#69EBDA]"
                       />
                     </div>
@@ -827,7 +827,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     className="w-full py-3 px-4 min-h-[46px] rounded-2xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 text-slate-950 font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer mt-4"
                   >
                     <Check className="w-4 h-4 text-slate-950" />
-                    <span>ইমেইল ও মোবাইল নম্বর আপডেট করুন</span>
+                    <span>Update Email & Phone</span>
                   </motion.button>
                 </form>
               )}
@@ -843,7 +843,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     <div className="flex items-center justify-between pb-1 border-b border-white/10">
                       <h4 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
                         <Key className="w-4 h-4 text-[#69EBDA]" />
-                        <span>অ্যাকাউন্টের পাসওয়ার্ড পরিবর্তন</span>
+                        <span>Change Account Password</span>
                       </h4>
                       <button
                         type="button"
@@ -851,13 +851,13 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                         className="text-[11px] text-[#69EBDA] font-bold flex items-center gap-1 hover:underline cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span>{showPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন'}</span>
+                        <span>{showPassword ? 'Hide Password' : 'Show Password'}</span>
                       </button>
                     </div>
 
                     <div className="space-y-1">
                       <label className="text-[10px] uppercase tracking-wider font-extrabold text-slate-300">
-                        বর্তমান পাসওয়ার্ড
+                        Current Password
                       </label>
                       <div className="relative flex items-center">
                         <Lock className="absolute left-3.5 w-4 h-4 text-slate-300" />
@@ -875,28 +875,28 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-wider font-extrabold text-slate-300">
-                          নতুন পাসওয়ার্ড
+                          New Password
                         </label>
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="কমপক্ষে ৬ অক্ষর"
+                          placeholder="At least 6 characters"
                           className="w-full px-4 py-2.5 min-h-[42px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 text-white text-xs sm:text-sm font-bold focus:outline-none focus:border-[#69EBDA]"
                         />
                       </div>
 
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-wider font-extrabold text-slate-300">
-                          নতুন পাসওয়ার্ড নিশ্চিত করুন
+                          Confirm New Password
                         </label>
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="পাসওয়ার্ড পুনরায় লিখুন"
+                          placeholder="Re-enter password"
                           className="w-full px-4 py-2.5 min-h-[42px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 text-white text-xs sm:text-sm font-bold focus:outline-none focus:border-[#69EBDA]"
                         />
                       </div>
@@ -909,7 +909,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                       className="w-full py-2.5 px-4 min-h-[44px] rounded-2xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Lock className="w-3.5 h-3.5 text-[#69EBDA]" />
-                      <span>পাসওয়ার্ড আপডেট করুন</span>
+                      <span>Update Password</span>
                     </motion.button>
                   </form>
 
@@ -918,10 +918,10 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
                         <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
-                        <span>পাসওয়ার্ড ভুলে গেছেন বা রিকভারি প্রয়োজন?</span>
+                        <span>Forgot password or need recovery?</span>
                       </div>
                       <p className="text-[11px] text-slate-300 mt-0.5">
-                        আমরা সরাসরি <strong className="text-white">{user?.email || email}</strong> ঠিকানায় পাসওয়ার্ড রিসেট করার লিংক পাঠাব।
+                        We will send a password reset link directly to <strong className="text-white">{user?.email || email}</strong>.
                       </p>
                     </div>
 
@@ -932,7 +932,7 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                       className="shrink-0 px-4 py-2.5 rounded-xl bg-[#69EBDA]/20 hover:bg-[#69EBDA]/30 border border-[#69EBDA]/45 text-[#69EBDA] font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       {isResetSending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      <span>{isResetSending ? 'লিংক পাঠানো হচ্ছে...' : 'রিসেট লিংক পাঠান'}</span>
+                      <span>{isResetSending ? 'Sending Link...' : 'Send Reset Link'}</span>
                     </button>
                   </div>
 
@@ -947,15 +947,15 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                   {/* Notification Channels */}
                   <div className="space-y-3">
                     <label className="text-[11px] uppercase tracking-wider font-extrabold text-slate-200 dark:text-slate-300 block">
-                      যোগাযোগ ও নোটিফিকেশন চ্যানেলসমূহ
+                      Communication & Notification Channels
                     </label>
 
                     <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/40 border border-white/15">
                       <div className="flex items-center gap-3">
                         <Mail className="w-4 h-4 text-[#69EBDA]" />
                         <div>
-                          <div className="text-xs font-bold text-white">ইমেইলে বুকিং আপডেট</div>
-                          <div className="text-[11px] text-slate-300">ভ্রমণের সময়সূচী, ফ্লাইট টিকিট ও ট্রাভেল পারমিটের আপডেট পান</div>
+                          <div className="text-xs font-bold text-white">Booking Updates via Email</div>
+                          <div className="text-[11px] text-slate-300">Receive trip schedules, flight tickets & travel permit notifications</div>
                         </div>
                       </div>
                       <input
@@ -970,8 +970,8 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                       <div className="flex items-center gap-3">
                         <MessageSquare className="w-4 h-4 text-emerald-400" />
                         <div>
-                          <div className="text-xs font-bold text-white">হোয়াটসঅ্যাপে ভিআইপি কনসিয়ার্জ অ্যালার্ট</div>
-                          <div className="text-[11px] text-slate-300">সরাসরি ট্রাভেল এজেন্টের সাথে যোগাযোগ ও লাইভ ট্যুর নোটিফিকেশন</div>
+                          <div className="text-xs font-bold text-white">VIP Concierge Alerts on WhatsApp</div>
+                          <div className="text-[11px] text-slate-300">Direct contact with travel agents & live tour notifications</div>
                         </div>
                       </div>
                       <input
@@ -986,8 +986,8 @@ export const UserProfileModal = ({ isOpen, onClose }) => {
                       <div className="flex items-center gap-3">
                         <Sparkles className="w-4 h-4 text-amber-300" />
                         <div>
-                          <div className="text-xs font-bold text-white">বিশেষ অফার ও নতুন ট্যুর প্যাকেজ</div>
-                          <div className="text-[11px] text-slate-300">বিশেষ ছাড়ে প্রাইভেট রিসোর্ট ও সীমিত সিটের ট্যুর অফারসমূহ সবার আগে পান</div>
+                          <div className="text-xs font-bold text-white">Exclusive Offers & New Tour Packages</div>
+                          <div className="text-[11px] text-slate-300">Early access to discounted private resorts and limited-seat expeditions</div>
                         </div>
                       </div>
                       <input

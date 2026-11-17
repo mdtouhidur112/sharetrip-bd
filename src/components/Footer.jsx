@@ -35,34 +35,34 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
             <div className="max-w-xl text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#69EBDA]/20 text-[#69EBDA] text-xs font-bold mb-3 border border-[#69EBDA]/40">
                 <Sparkles className="w-3.5 h-3.5" />
-                {footerSettings?.newsletterBadge || 'বিশেষ নিউজলেটার'}
+                {footerSettings?.newsletterBadge || 'Exclusive Newsletter'}
               </div>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif]">
-                {footerSettings?.newsletterTitle || 'অপ্রকাশিত ভ্রমণ পরিকল্পনা ও গোপন রিসোর্ট অফার পান'}
+                {footerSettings?.newsletterTitle || 'Get Unpublished Itineraries & Secret Resort Offers'}
               </h3>
               <p className="mt-2 text-slate-100 dark:text-slate-300/80 text-sm font-medium">
-                {footerSettings?.newsletterSubtitle || '৪৫,০০০+ ভ্রমণপিপাসুদের সাথে যুক্ত হন এবং মৌসুমী চার্টার ও প্রাইভেট আইল্যান্ড ট্যুরে আগাম ছাড় উপভোগ করুন।'}
+                {footerSettings?.newsletterSubtitle || 'Join 45,000+ travelers and enjoy early access to seasonal charters and private island retreats.'}
               </p>
             </div>
 
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
-                alert('প্রাইভেট নিউজলেটারে সাবস্ক্রাইব করার জন্য ধন্যবাদ!');
+                alert('Thank you for subscribing to our private newsletter!');
               }}
               className="w-full lg:w-auto flex flex-col sm:flex-row gap-3"
             >
               <input
                 type="email"
                 required
-                placeholder="আপনার ইমেইল ঠিকানা দিন"
+                placeholder="Enter your email address"
                 className="px-5 py-3.5 rounded-2xl bg-slate-800/45 dark:bg-white/[0.08] backdrop-blur-xl border border-white/20 dark:border-white/20 text-white placeholder-slate-300 text-sm focus:outline-none focus:border-[#69EBDA] min-w-[280px]"
               />
               <button
                 type="submit"
                 className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 hover:from-[#69EBDA]/90 hover:to-cyan-300 text-slate-950 font-bold text-sm shadow-lg shadow-[#69EBDA]/30 flex items-center justify-center gap-2 transition-all transform active:scale-95 cursor-pointer"
               >
-                <span>সাবস্ক্রাইব</span>
+                <span>Subscribe</span>
                 <Send className="w-4 h-4" />
               </button>
             </form>
@@ -75,33 +75,25 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              {branding?.logoUrl ? (
-                <div 
-                  className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl"
-                  style={{
-                    width: `${Math.min(56, branding.logoWidth || 40)}px`,
-                    height: `${Math.min(56, branding.logoHeight || 40)}px`
-                  }}
-                >
-                  <img 
-                    src={branding.logoUrl} 
-                    alt={branding.brandName || 'Brand Logo'}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#69EBDA] to-cyan-400 p-[1px] shadow-lg shadow-[#69EBDA]/30 shrink-0">
-                  <div className="w-full h-full bg-slate-900 rounded-[15px] flex items-center justify-center">
-                    <Compass className="w-5 h-5 text-[#69EBDA]" />
-                  </div>
-                </div>
-              )}
+              <div 
+                className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl"
+                style={{
+                  width: `${Math.min(56, branding?.logoWidth || 40)}px`,
+                  height: `${Math.min(56, branding?.logoHeight || 40)}px`
+                }}
+              >
+                <img 
+                  src={branding?.logoUrl || '/stb-logo.png'} 
+                  alt={branding?.brandName || 'STB Brand Logo'}
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <span className="text-xl font-extrabold tracking-wider font-['Outfit',sans-serif]" style={{ color: branding?.textColor || '#FFFFFF' }}>
                 {branding?.brandName || 'AETHERIA'}
               </span>
             </div>
             <p className="text-slate-100 dark:text-slate-400 text-sm max-w-sm leading-relaxed font-medium">
-              {footerSettings?.description || 'সাতটি মহাদেশ জুড়ে অবিস্মরণীয় ও পরিবেশবান্ধব বিলাসবহুল ভ্রমণ। সর্বোচ্চ বিশ্বমানের আতিথেয়তা ও নিখুঁত সেবা।'}
+              {footerSettings?.description || 'Unforgettable and eco-luxury journeys across seven continents. World-class hospitality and impeccable service.'}
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               {Array.isArray(footerSettings?.socialLinks) &&
@@ -128,7 +120,7 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
                   })
                 }
                 className="w-9 h-9 rounded-xl bg-slate-800/60 dark:bg-white/5 hover:bg-slate-800 dark:hover:bg-white/15 border border-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-                title="শেয়ার করুন"
+                title="Share"
               >
                 <Share2 className="w-4 h-4 text-[#69EBDA]" />
               </button>
@@ -138,7 +130,7 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
           {/* Quick Links */}
           <div>
             <h4 className="text-xs font-extrabold text-[#69EBDA] uppercase tracking-wider mb-4">
-              {footerSettings?.navTitle || 'ন্যাভিগেশন'}
+              {footerSettings?.navTitle || 'Navigation'}
             </h4>
             <ul className="space-y-2.5 text-sm text-slate-100 dark:text-slate-300 font-medium">
               {(Array.isArray(footerSettings?.navLinks) && footerSettings.navLinks.length > 0 ? footerSettings.navLinks : NAV_LINKS).map((link, idx) => (
@@ -154,7 +146,7 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
           {/* Curated Categories */}
           <div>
             <h4 className="text-xs font-extrabold text-[#69EBDA] uppercase tracking-wider mb-4">
-              {footerSettings?.categoryTitle || 'ভ্রমণ বিভাগ'}
+              {footerSettings?.categoryTitle || 'Travel Categories'}
             </h4>
             <ul className="space-y-2.5 text-sm text-slate-100 dark:text-slate-300 font-medium">
               {(Array.isArray(footerSettings?.categoryLinks) ? footerSettings.categoryLinks : []).map((cat, idx) => (
@@ -170,7 +162,7 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
           {/* Accreditation */}
           <div>
             <h4 className="text-xs font-extrabold text-[#69EBDA] uppercase tracking-wider mb-4">
-              {footerSettings?.commitmentTitle || 'আমাদের অঙ্গীকার'}
+              {footerSettings?.commitmentTitle || 'Our Commitments'}
             </h4>
             <div className="space-y-3 text-xs text-slate-100 dark:text-slate-400 font-medium">
               {(Array.isArray(footerSettings?.commitments) ? footerSettings.commitments : []).map((text, idx) => {
@@ -187,7 +179,7 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
                 onClick={onOpenBookCall}
                 className="mt-2 text-[#69EBDA] hover:underline font-extrabold cursor-pointer"
               >
-                প্রাইভেট পরামর্শের জন্য কল করুন &rarr;
+                Book a Private Consultation Call &rarr;
               </button>
             </div>
           </div>
@@ -197,10 +189,10 @@ export const Footer = ({ onOpenBookCall, onOpenAdmin }) => {
         {/* Bottom Credits, Copyright & Payment System Logos */}
         <div className="mt-8 flex flex-col lg:flex-row items-center justify-between text-xs text-slate-300 dark:text-slate-400 gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left">
-            <p>{footerSettings?.copyrightText || '© ২০২৬ এথেরিয়া ট্রাভেল গ্রুপ। সর্বস্বত্ব সংরক্ষিত।'}</p>
+            <p>{footerSettings?.copyrightText || '© 2026 Etheria Travel Group. All rights reserved.'}</p>
             <div className="flex items-center gap-5">
-              <a href="#privacy" className="hover:text-white transition-colors">{footerSettings?.privacyLabel || 'গোপনীয়তা নীতি'}</a>
-              <a href="#terms" className="hover:text-white transition-colors">{footerSettings?.termsLabel || 'ভ্রমণের শর্তাবলী'}</a>
+              <a href="#privacy" className="hover:text-white transition-colors">{footerSettings?.privacyLabel || 'Privacy Policy'}</a>
+              <a href="#terms" className="hover:text-white transition-colors">{footerSettings?.termsLabel || 'Terms of Travel'}</a>
               {footerSettings?.developerPortfolioUrl ? (
                 <a
                   href={footerSettings.developerPortfolioUrl}

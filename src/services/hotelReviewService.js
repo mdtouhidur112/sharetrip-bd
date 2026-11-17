@@ -2,77 +2,7 @@
 // Dedicated service for Single Hotel Customer Reviews, Ratings, and Realtime Supabase Sync
 import { supabase } from './supabaseClient';
 
-export const DEFAULT_HOTEL_REVIEWS = {
-  'hotel-royal-tulip-coxsbazar': [
-    {
-      id: 'hrev-cox-1',
-      hotelId: 'hotel-royal-tulip-coxsbazar',
-      userId: 'demo-user-1',
-      userName: 'তানভীর আহমেদ',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-      rating: 5,
-      comment: 'অসাধারণ সমুদ্রের ভিউ এবং রুম সার্ভিস চমৎকার ছিল! বিশেষ করে প্রাইভেট বিচ ও সুইমিং পুল খুব ভালো লেগেছে। পরিবার নিয়ে সময় কাটানোর জন্য সেরা লাক্সারি রিসোর্ট।',
-      date: '২ দিন আগে',
-      createdAt: '2026-11-08T10:00:00Z',
-      likes: 14,
-      likedBy: ['demo-user-1', 'device-guest-1']
-    },
-    {
-      id: 'hrev-cox-2',
-      hotelId: 'hotel-royal-tulip-coxsbazar',
-      userId: 'demo-user-2',
-      userName: 'নুসরাত জাহান',
-      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-      rating: 5,
-      comment: 'খাবার অনেক সুস্বাদু ছিল এবং বাচ্চাদের জন্য পরিবেশ একদম নিরাপদ ও আরামদায়ক। ইনানী বিচের সূর্যাস্ত রুমের ব্যালকনি থেকেই দারুণভাবে উপভোগ করেছি।',
-      date: '৪ দিন আগে',
-      createdAt: '2026-11-06T14:30:00Z',
-      likes: 9,
-      likedBy: ['demo-user-2']
-    },
-    {
-      id: 'hrev-cox-3',
-      hotelId: 'hotel-royal-tulip-coxsbazar',
-      userId: 'demo-user-3',
-      userName: 'মোঃ শাহরিয়ার কবির',
-      userAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-      rating: 4,
-      comment: 'লোকেশন এবং পরিবেশ বিশ্বমানের। স্টাফদের ব্যবহার যথেষ্ট আন্তরিক। সুইমিং পুলের পানি সবসময় পরিষ্কার পরিচ্ছন্ন ছিল।',
-      date: '১ সপ্তাহ আগে',
-      createdAt: '2026-11-03T09:15:00Z',
-      likes: 6,
-      likedBy: []
-    }
-  ],
-  'hotel-meghmachang-sajek': [
-    {
-      id: 'hrev-sajek-1',
-      hotelId: 'hotel-meghmachang-sajek',
-      userId: 'demo-user-4',
-      userName: 'রাকিবুল হাসান',
-      userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-      rating: 5,
-      comment: 'মেঘমাচাং কটেজের বারান্দা থেকে সকালের মেঘের ভেলা দেখার অনুভূতি সত্যিই অবিশ্বাস্য! কাঠের নান্দনিক কাজ এবং শান্ত পরিবেশ অতুলনীয়।',
-      date: '১ দিন আগে',
-      createdAt: '2026-11-09T08:00:00Z',
-      likes: 18,
-      likedBy: ['demo-user-4']
-    },
-    {
-      id: 'hrev-sajek-2',
-      hotelId: 'hotel-meghmachang-sajek',
-      userId: 'demo-user-5',
-      userName: 'সাদিয়া ইসলাম',
-      userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
-      rating: 5,
-      comment: 'সাজেকের সেরা রিসোর্ট নিঃসন্দেহে। রুইলুই পাড়ায় এমন মেঘের স্পর্শ অন্য কোথাও পাওয়া যায় না। বাঁশের চা এবং স্থানীয় খাবার বেশ ভালো ছিল।',
-      date: '৩ দিন আগে',
-      createdAt: '2026-11-07T12:00:00Z',
-      likes: 11,
-      likedBy: []
-    }
-  ]
-};
+export const DEFAULT_HOTEL_REVIEWS = {};
 
 const getStorageKey = (hotelId) => `aetheria_hotel_reviews_${hotelId}`;
 const getLikesKey = (hotelId) => `aetheria_hotel_liked_reviews_${hotelId}`;
@@ -151,6 +81,7 @@ export const HotelReviewService = {
           // Group by hotel_id and cache locally
           const grouped = {};
           dbReviews.forEach((row) => {
+            if (String(row.user_id || '').startsWith('demo-user-') || String(row.id || '').startsWith('hrev-')) return;
             const hId = row.hotel_id;
             if (!grouped[hId]) grouped[hId] = [];
             grouped[hId].push(rowToReview(row));
@@ -248,7 +179,9 @@ export const HotelReviewService = {
       if (stored !== null) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed.filter(
+            (r) => r && !String(r.userId || '').startsWith('demo-user-') && !String(r.id || '').startsWith('hrev-')
+          );
         }
       }
     } catch (e) {

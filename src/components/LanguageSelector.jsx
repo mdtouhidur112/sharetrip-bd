@@ -12,10 +12,10 @@ export const LanguageSelector = ({ className = '' }) => {
   const languages = [
     {
       code: 'bn',
-      label: 'বাংলা',
+      label: 'Bengali',
       englishLabel: 'Bengali',
       flag: '🇧🇩',
-      badge: 'বাং'
+      badge: 'BN'
     },
     {
       code: 'en',
@@ -81,7 +81,7 @@ export const LanguageSelector = ({ className = '' }) => {
           }
         `}
         aria-label="Select language"
-        title="ভাষা পরিবর্তন / Switch Language"
+        title="Switch Language"
       >
         <Globe className="w-3.5 h-3.5 text-[#69EBDA]" />
         <span className="tracking-wide font-extrabold">{currentLang.badge}</span>

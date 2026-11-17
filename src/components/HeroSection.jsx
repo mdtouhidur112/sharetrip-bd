@@ -20,7 +20,10 @@ import {
   Plane,
   Utensils,
   ArrowLeftRight,
-  Clock
+  Clock,
+  AlertCircle,
+  MessageCircle,
+  Phone
 } from 'lucide-react';
 import { DEFAULT_HERO_BANNER } from '../data/travelData';
 import { openPopup } from '../utils/popupManager';
@@ -56,6 +59,41 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
   const [rooms, setRooms] = useState(1);
   const [adults, setAdults] = useState(2);
   const [childrenCount, setChildrenCount] = useState(0);
+  const [isHotelHelpCenterModalOpen, setIsHotelHelpCenterModalOpen] = useState(false);
+  const [pendingGuestTarget, setPendingGuestTarget] = useState({ adults: 2, children: 0, total: 2 });
+  const [contactInfo, setContactInfo] = useState(() => StorageService.getContactInfo());
+
+  const handleHeroRoomChange = (newRooms) => {
+    const safeRooms = Math.max(1, Math.min(10, newRooms));
+    setRooms(safeRooms);
+    const total = adults + childrenCount;
+    if (total > safeRooms * 3) {
+      setPendingGuestTarget({ adults, children: childrenCount, total });
+      setIsHotelHelpCenterModalOpen(true);
+    }
+  };
+
+  const handleHeroAdultsChange = (newAdults) => {
+    const safeAdults = Math.max(1, Math.min(20, newAdults));
+    const newTotal = safeAdults + childrenCount;
+    if (newTotal > rooms * 3) {
+      setPendingGuestTarget({ adults: safeAdults, children: childrenCount, total: newTotal });
+      setIsHotelHelpCenterModalOpen(true);
+      return;
+    }
+    setAdults(safeAdults);
+  };
+
+  const handleHeroChildrenChange = (newChildren) => {
+    const safeChildren = Math.max(0, Math.min(15, newChildren));
+    const newTotal = adults + safeChildren;
+    if (newTotal > rooms * 3) {
+      setPendingGuestTarget({ adults, children: safeChildren, total: newTotal });
+      setIsHotelHelpCenterModalOpen(true);
+      return;
+    }
+    setChildrenCount(safeChildren);
+  };
   const [pkgCategory, setPkgCategory] = useState('');
   const [restQuery, setRestQuery] = useState('');
   const [mealPlan, setMealPlan] = useState('Breakfast, Lunch & Dinner');
@@ -531,7 +569,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                 type="text"
                 value={topSearchQuery}
                 onChange={(e) => setTopSearchQuery(e.target.value)}
-                placeholder="গন্তব্য, রিসোর্ট বা ভ্রমণের স্থান খুঁজুন..."
+                placeholder="Search destinations, resorts, or travel spots..."
                 className="w-full bg-transparent text-xs sm:text-sm font-bold text-white placeholder:text-slate-300 focus:outline-none"
               />
             </div>
@@ -556,7 +594,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                 transform active:scale-95 transition-all cursor-pointer
               "
             >
-              <span>অনুসন্ধান</span>
+              <span>Search</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
@@ -613,7 +651,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   type="text"
                   value={topSearchQuery}
                   onChange={(e) => setTopSearchQuery(e.target.value)}
-                  placeholder="গন্তব্য, রিসোর্ট বা ভ্রমণের স্থান খুঁজুন..."
+                  placeholder="Search destinations, resorts, or travel spots..."
                   className="w-full bg-transparent text-xs sm:text-sm font-bold text-white placeholder:text-slate-300 focus:outline-none"
                 />
               </div>
@@ -638,42 +676,57 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   transform active:scale-95 transition-all cursor-pointer
                 "
               >
-                <span>অনুসন্ধান</span>
+                <span>Search</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </form>
           </div>
 
           {/* Headline over rotating banner photo */}
-          <h1 
-            className={`tracking-tight mb-2 sm:mb-3 font-['Outfit',sans-serif] leading-[1.15] drop-shadow-md transition-all ${getHeadlineSizeClass(heroBanner?.headlineSize)}`}
-            style={{
-              color: heroBanner?.headlineColor || '#FFFFFF',
-              fontWeight: heroBanner?.headlineBold !== false ? '800' : '400'
-            }}
-          >
-            {heroBanner?.headline || 'সবার মুখে মুখে ফেরা'} <br className="hidden sm:inline" />
-            <span 
-              className="drop-shadow-sm transition-all"
-              style={{
-                color: heroBanner?.highlightColor || '#69EBDA',
-                fontWeight: heroBanner?.headlineBold !== false ? '800' : '400'
-              }}
-            >
-              {heroBanner?.headlineHighlight || 'স্বপ্নের ভ্রমণ অভিজ্ঞতা'}
-            </span>
-          </h1>
+          {(() => {
+            const headlineText = heroBanner?.headline ?? 'Unforgettable & Iconic';
+            const highlightText = heroBanner?.headlineHighlight ?? 'Dream Travel Experience';
+            const subtitleText = heroBanner?.subtitle ?? 'Join precision-crafted itineraries designed by premier travel experts for aesthetic adventures, serene luxury resorts, and authentic cultural journeys.';
+            return (
+              <>
+                {(headlineText || highlightText) && (
+                  <h1 
+                    className={`tracking-tight mb-2 sm:mb-3 font-['Outfit',sans-serif] leading-[1.15] drop-shadow-md transition-all ${getHeadlineSizeClass(heroBanner?.headlineSize)}`}
+                    style={{
+                      color: heroBanner?.headlineColor || '#FFFFFF',
+                      fontWeight: heroBanner?.headlineBold !== false ? '800' : '400'
+                    }}
+                  >
+                    {headlineText}
+                    {headlineText && highlightText && <br className="hidden sm:inline" />}
+                    {highlightText && (
+                      <span 
+                        className="drop-shadow-sm transition-all"
+                        style={{
+                          color: heroBanner?.highlightColor || '#69EBDA',
+                          fontWeight: heroBanner?.headlineBold !== false ? '800' : '400'
+                        }}
+                      >
+                        {headlineText ? ` ${highlightText}` : highlightText}
+                      </span>
+                    )}
+                  </h1>
+                )}
 
-          {/* Subtext */}
-          <p 
-            className={`max-w-2xl mx-auto leading-relaxed mb-3 sm:mb-4 drop-shadow-sm transition-all ${getSubtitleSizeClass(heroBanner?.subtitleSize)}`}
-            style={{
-              color: heroBanner?.subtitleColor || '#F1F5F9',
-              fontWeight: heroBanner?.subtitleBold ? '700' : '400'
-            }}
-          >
-            {heroBanner?.subtitle || 'শীর্ষস্থানীয় ট্রাভেল স্থপতিদের নিখুঁত পরিকল্পনায় অংশ নিন নান্দনিক অ্যাডভেঞ্চার, নিরিবিলি লাক্সারি রিসোর্ট ও খাঁটি সাংস্কৃতিক অভিজ্ঞতায়।'}
-          </p>
+                {subtitleText && (
+                  <p 
+                    className={`max-w-2xl mx-auto leading-relaxed mb-3 sm:mb-4 drop-shadow-sm transition-all ${getSubtitleSizeClass(heroBanner?.subtitleSize)}`}
+                    style={{
+                      color: heroBanner?.subtitleColor || '#F1F5F9',
+                      fontWeight: heroBanner?.subtitleBold ? '700' : '400'
+                    }}
+                  >
+                    {subtitleText}
+                  </p>
+                )}
+              </>
+            );
+          })()}
 
           {/* Banner Location Indicator at bottom of Card 1 */}
           <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
@@ -696,7 +749,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   }
                 }}
                 className="px-2.5 py-0.5 rounded-full bg-[#69EBDA]/20 hover:bg-[#69EBDA] text-[#69EBDA] hover:text-slate-950 border border-[#69EBDA]/50 font-extrabold transition-all duration-200 cursor-pointer flex items-center gap-1 shadow-sm"
-                title="এই গন্তব্যের সকল প্যাকেজ দেখতে ক্লিক করুন"
+                title="Click to view all packages for this destination"
               >
                 <span>{currentSlide.destinationName || currentSlide.location || ''}</span>
                 <ArrowRight className="w-3 h-3" />
@@ -1081,9 +1134,9 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                       <div className="flex items-center justify-between text-xs font-bold text-white">
                         <span>Rooms</span>
                         <div className="flex items-center gap-2">
-                          <button type="button" onClick={() => setRooms((r) => Math.max(1, r - 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
+                          <button type="button" onClick={() => handleHeroRoomChange(rooms - 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
                           <span className="w-5 text-center">{rooms}</span>
-                          <button type="button" onClick={() => setRooms((r) => Math.min(10, r + 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
+                          <button type="button" onClick={() => handleHeroRoomChange(rooms + 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs font-bold text-white">
@@ -1092,9 +1145,9 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                           <span className="block text-[10px] font-semibold text-slate-300/80">17+ years</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button type="button" onClick={() => setAdults((a) => Math.max(1, a - 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
+                          <button type="button" onClick={() => handleHeroAdultsChange(adults - 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
                           <span className="w-5 text-center">{adults}</span>
-                          <button type="button" onClick={() => setAdults((a) => Math.min(20, a + 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
+                          <button type="button" onClick={() => handleHeroAdultsChange(adults + 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs font-bold text-white">
@@ -1103,9 +1156,9 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                           <span className="block text-[10px] font-semibold text-slate-300/80">1 - 17 years</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button type="button" onClick={() => setChildrenCount((c) => Math.max(0, c - 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
+                          <button type="button" onClick={() => handleHeroChildrenChange(childrenCount - 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">-</button>
                           <span className="w-5 text-center">{childrenCount}</span>
-                          <button type="button" onClick={() => setChildrenCount((c) => Math.min(15, c + 1))} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
+                          <button type="button" onClick={() => handleHeroChildrenChange(childrenCount + 1)} className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 cursor-pointer">+</button>
                         </div>
                       </div>
                     </div>
@@ -1414,7 +1467,7 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                       {reviewCount > 0 ? `${avgRating} / 5.0` : '0.0 / 5.0'}
                     </div>
                     <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
-                      {reviewCount > 0 ? `${reviewCount} টি ভেরিফাইড রিভিউ` : 'এখনো কোনো রিভিউ নেই'}
+                      {reviewCount > 0 ? `${reviewCount} Verified Reviews` : 'No reviews yet'}
                     </div>
                   </div>
                 </div>
@@ -1425,10 +1478,10 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-extrabold text-white">
-                      {bookingCount} টি বুকিং
+                      {bookingCount} Bookings
                     </div>
                     <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
-                      {totalServices} টি ভেরিফাইড সার্ভিস
+                      {totalServices} Verified Services
                     </div>
                   </div>
                 </div>
@@ -1439,10 +1492,10 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-extrabold text-white">
-                      {destinations.length} টি গন্তব্য
+                      {destinations.length} Destinations
                     </div>
                     <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
-                      {allPackages.length} টি ট্যুর ও {allTransports.length} টি রুট
+                      {allPackages.length} Tours & {allTransports.length} Routes
                     </div>
                   </div>
                 </div>
@@ -1453,10 +1506,10 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-extrabold text-white">
-                      {allHotels.length + allRestaurants.length} টি প্রপার্টি
+                      {allHotels.length + allRestaurants.length} Properties
                     </div>
                     <div className="text-[11px] text-slate-200 dark:text-slate-400 font-semibold">
-                      {allHotels.length} হোটেল • {allRestaurants.length} রেস্টুরেন্ট
+                      {allHotels.length} Hotels • {allRestaurants.length} Restaurants
                     </div>
                   </div>
                 </div>
@@ -1467,6 +1520,109 @@ export const HeroSection = ({ onSearch, onSelectCategory }) => {
         </div>
 
       </div>
+
+      {/* Hotel Help Center & Extra Guest Contact Modal (>3 guests per room) */}
+      <AnimatePresence>
+        {isHotelHelpCenterModalOpen && (() => {
+          const rawWa = (contactInfo?.whatsapp || '').replace(/[^0-9]/g, '');
+          const cleanHotlineTel = (contactInfo?.phone || contactInfo?.hotline || '').replace(/[^0-9+]/g, '');
+          const neededRooms = Math.max(rooms + 1, Math.ceil(pendingGuestTarget.total / 3));
+          return (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsHotelHelpCenterModalOpen(false)}
+                className="fixed inset-0 bg-slate-950/75 backdrop-blur-md"
+              />
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-300 dark:border-white/15 shadow-2xl space-y-5 text-left"
+              >
+                <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                        Hotel Help Center &amp; Support
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Guest Capacity Guidelines
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsHotelHelpCenterModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-1.5">
+                  <p className="text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-200">
+                    Up to {rooms * 3} guests can stay across {rooms} room(s) (maximum 3 guests per room).
+                  </p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    You have selected <span className="font-bold">{pendingGuestTarget.total} guests</span>. For a comfortable stay of {pendingGuestTarget.total} guests, please book at least <span className="font-bold">{neededRooms} room(s)</span> or contact our support team for extra beds and special arrangements.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRooms(neededRooms);
+                    setAdults(pendingGuestTarget.adults);
+                    setChildrenCount(pendingGuestTarget.children);
+                    setIsHotelHelpCenterModalOpen(false);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Select {neededRooms} Rooms (Add Required Rooms)</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {(rawWa || cleanHotlineTel) && (
+                  <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-white/10">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block text-center">
+                      Or Contact Directly
+                    </span>
+                    {rawWa && (
+                      <a
+                        href={`https://wa.me/${rawWa}?text=${encodeURIComponent(
+                          `Hello! I would like to inquire about guest policies / extra bed facilities for ${pendingGuestTarget.total} guests across ${rooms} room(s).`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-current" />
+                        <span>Message Support on WhatsApp</span>
+                      </a>
+                    )}
+                    {cleanHotlineTel && (
+                      <a
+                        href={`tel:${cleanHotlineTel}`}
+                        className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>Call Help Center: {cleanHotlineTel}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
     </section>
   );
 };

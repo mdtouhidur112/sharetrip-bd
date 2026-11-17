@@ -33,9 +33,23 @@ import {
   PieChart,
   BarChart3,
   Eye,
-  Mail
+  Mail,
+  History,
+  ShieldAlert,
+  RotateCcw,
+  UserCheck,
+  Globe,
+  Activity,
+  Server,
+  Database,
+  Wifi,
+  RefreshCw,
+  Cpu,
+  HardDrive
 } from 'lucide-react';
 import { StorageService } from '../../services/storageService';
+import { VisitorService } from '../../services/visitorService';
+import { SystemHealthService } from '../../services/systemHealthService';
 
 const EXPENSE_CATEGORIES = [
   'Fuel & Driver',
@@ -47,10 +61,12 @@ const EXPENSE_CATEGORIES = [
 
 const PAYMENT_METHODS = ['bKash', 'Nagad', 'Bank Transfer', 'Cash'];
 
-export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', isLight = false, onShowToast }) => {
+export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', isLight = false, isRoot = false, currentAdmin = null, onShowToast }) => {
   const isOrderMode = mode === 'customer-order';
   const [execTab, setExecTab] = useState(isOrderMode ? 'bookings' : 'overview');
   const [bookings, setBookings] = useState(() => StorageService.getBookings() || []);
+  const [auditLogs, setAuditLogs] = useState(() => StorageService.getBookingAuditLogs() || []);
+  const [activeAuditModal, setActiveAuditModal] = useState(null);
   const [expenses, setExpenses] = useState(() => StorageService.getExpenses() || []);
   const [hotels, setHotels] = useState(() => StorageService.getHotels() || []);
   const [transports, setTransports] = useState(() => StorageService.getTransports() || []);
@@ -58,6 +74,14 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
   const [packages, setPackages] = useState(() => StorageService.getPackages() || []);
   const [users, setUsers] = useState(() => StorageService.getRegisteredUsers?.() || []);
   const [branding, setBranding] = useState(() => StorageService.getBranding());
+  const [liveVisitors, setLiveVisitors] = useState({
+    totalLive: 0,
+    usersCount: 0,
+    guestsCount: 0,
+    visitors: []
+  });
+  const [systemHealth, setSystemHealth] = useState(null);
+  const [isRefreshingHealth, setIsRefreshingHealth] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('All');
@@ -94,6 +118,33 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
     setExecTab(isOrderMode ? 'bookings' : 'overview');
   }, [isOrderMode]);
 
+  // Live Website Visitors Subscription (Users vs Non-Users / Guests)
+  useEffect(() => {
+    const unsubscribe = VisitorService.subscribeLiveVisitors((summary) => {
+      setLiveVisitors(summary);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const refreshSystemHealth = async () => {
+    setIsRefreshingHealth(true);
+    try {
+      const snap = await SystemHealthService.collectSnapshot();
+      setSystemHealth(snap);
+    } finally {
+      setIsRefreshingHealth(false);
+    }
+  };
+
+  // Realtime System Ping & Database Memory Telemetry (10s interval)
+  useEffect(() => {
+    refreshSystemHealth();
+    const timer = setInterval(() => {
+      refreshSystemHealth();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     const syncBookings = () => setBookings(StorageService.getBookings() || []);
     const syncExpenses = () => setExpenses(StorageService.getExpenses() || []);
@@ -103,6 +154,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
     const syncPackages = () => setPackages(StorageService.getPackages() || []);
     const syncUsers = () => setUsers(StorageService.getRegisteredUsers?.() || []);
     const syncBranding = () => setBranding(StorageService.getBranding());
+    const syncAuditLogs = () => setAuditLogs(StorageService.getBookingAuditLogs() || []);
 
     window.addEventListener('app:bookings-updated', syncBookings);
     window.addEventListener('app:expenses-updated', syncExpenses);
@@ -112,6 +164,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
     window.addEventListener('app:packages-updated', syncPackages);
     window.addEventListener('app:users-updated', syncUsers);
     window.addEventListener('app:branding-updated', syncBranding);
+    window.addEventListener('app:booking-audit-logs-updated', syncAuditLogs);
 
     return () => {
       window.removeEventListener('app:bookings-updated', syncBookings);
@@ -122,6 +175,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
       window.removeEventListener('app:packages-updated', syncPackages);
       window.removeEventListener('app:users-updated', syncUsers);
       window.removeEventListener('app:branding-updated', syncBranding);
+      window.removeEventListener('app:booking-audit-logs-updated', syncAuditLogs);
     };
   }, []);
 
@@ -147,8 +201,8 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
     );
 
     const totalConfirmedRevenue = confirmedBookings.reduce((sum, b) => sum + parseNum(b.totalPrice), 0);
-    const totalAdvanceCollected = activeBookings.reduce((sum, b) => sum + parseNum(b.advancePaid), 0);
-    const totalDueBalance = activeBookings.reduce((sum, b) => {
+    const totalAdvanceCollected = confirmedBookings.reduce((sum, b) => sum + parseNum(b.advancePaid), 0);
+    const totalDueBalance = confirmedBookings.reduce((sum, b) => {
       const tot = parseNum(b.totalPrice);
       const adv = parseNum(b.advancePaid);
       return sum + Math.max(0, b.dueAmount != null ? Number(b.dueAmount) : tot - adv);
@@ -168,7 +222,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
       Restaurant: { count: 0, revenue: 0, color: '#FBBF24' }
     };
 
-    activeBookings.forEach((b) => {
+    confirmedBookings.forEach((b) => {
       const cat = categorizeBooking(b);
       dist[cat].count += 1;
       dist[cat].revenue += parseNum(b.totalPrice);
@@ -221,8 +275,11 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
         name: u.name || 'Customer',
         email: u.email || '',
         phone: u.phone || '',
+        whatsapp: u.whatsapp || u.phone || '',
         bookingsCount: 0,
-        totalSpend: 0
+        totalSpend: 0,
+        lastBookingDate: '',
+        recentServices: []
       });
     });
 
@@ -234,21 +291,90 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
         name: b.customerName || b.fullName || 'Guest Customer',
         email: b.customerEmail || b.email || '',
         phone: b.customerPhone || b.phone || '',
+        whatsapp: b.customerWhatsapp || b.whatsapp || b.customerPhone || b.phone || '',
         bookingsCount: 0,
-        totalSpend: 0
+        totalSpend: 0,
+        lastBookingDate: '',
+        recentServices: []
       };
       existing.bookingsCount += 1;
-      if ((b.status || '').toLowerCase() !== 'cancelled') {
+      if (['confirmed', 'ongoing', 'completed'].includes((b.status || '').toLowerCase())) {
         existing.totalSpend += parseNum(b.totalPrice);
       }
       if (!existing.phone && (b.customerPhone || b.phone)) existing.phone = b.customerPhone || b.phone;
+      if (!existing.whatsapp && (b.customerWhatsapp || b.whatsapp || b.customerPhone || b.phone)) {
+        existing.whatsapp = b.customerWhatsapp || b.whatsapp || b.customerPhone || b.phone;
+      }
+      if (!existing.email && (b.customerEmail || b.email)) existing.email = b.customerEmail || b.email;
+      const bDate = b.checkInDate || b.travelDate || b.timestamp || '';
+      if (bDate && (!existing.lastBookingDate || bDate > existing.lastBookingDate)) {
+        existing.lastBookingDate = bDate;
+      }
+      const svcTitle = b.itemTitle || b.hotelName || b.packageTitle || '';
+      if (svcTitle && !existing.recentServices.includes(svcTitle)) {
+        existing.recentServices.push(svcTitle);
+      }
       customerMap.set(key, existing);
     });
 
     const customers = Array.from(customerMap.values()).sort((a, b) => b.totalSpend - a.totalSpend);
+    const repeatCustomers = customers
+      .filter((c) => c.bookingsCount >= 2)
+      .sort((a, b) => b.bookingsCount - a.bookingsCount || b.totalSpend - a.totalSpend);
     const inquiries = safeBookings.filter((b) => (b.type || '').toLowerCase() === 'inquiry');
-    return { customers, inquiries };
+    return { customers, repeatCustomers, inquiries };
   }, [bookings, users]);
+
+  // Realtime Booking Audit Metrics (Customer Cancels, Order Confirm/Pending/Re-Pending/Cancel/Delete, Admin Actions)
+  const auditStats = useMemo(() => {
+    const safeLogs = Array.isArray(auditLogs) ? auditLogs : [];
+    const customerCancelledLogs = safeLogs.filter((l) => l.actionType === 'customer_cancelled');
+    const adminLogs = safeLogs.filter((l) => l.actorRole === 'root_admin' || l.actorRole === 'normal_admin');
+
+    const confirmedCount = adminLogs.filter((l) => l.actionType === 'confirmed').length;
+    const pendingCount = adminLogs.filter((l) => l.actionType === 'pending').length;
+    const rePendingCount = adminLogs.filter((l) => l.actionType === 're_pending').length;
+    const adminCancelledCount = adminLogs.filter((l) => l.actionType === 'cancelled').length;
+    const deletedCount = adminLogs.filter((l) => l.actionType === 'deleted').length;
+
+    const orderMap = new Map();
+    adminLogs.forEach((l) => {
+      const key = l.bookingId || l.id;
+      const existing = orderMap.get(key) || {
+        bookingId: l.bookingId || key,
+        customerName: l.customerName || 'Guest Customer',
+        customerEmail: l.customerEmail || '',
+        customerPhone: l.customerPhone || '',
+        customerWhatsapp: l.customerWhatsapp || l.customerPhone || '',
+        itemTitle: l.itemTitle || 'Travel Booking',
+        totalPrice: Number(l.totalPrice || 0),
+        confirmedTimes: 0,
+        pendingTimes: 0,
+        rePendingTimes: 0,
+        cancelledTimes: 0,
+        deletedTimes: 0,
+        logs: []
+      };
+      if (l.actionType === 'confirmed') existing.confirmedTimes += 1;
+      else if (l.actionType === 'pending') existing.pendingTimes += 1;
+      else if (l.actionType === 're_pending') existing.rePendingTimes += 1;
+      else if (l.actionType === 'cancelled') existing.cancelledTimes += 1;
+      else if (l.actionType === 'deleted') existing.deletedTimes += 1;
+      existing.logs.push(l);
+      orderMap.set(key, existing);
+    });
+
+    return {
+      customerCancelledLogs,
+      adminLogs,
+      confirmedCount,
+      pendingCount,
+      rePendingCount,
+      adminCancelledCount,
+      deletedCount,
+      orderGroups: Array.from(orderMap.values())
+    };
+  }, [auditLogs]);
 
   const filteredBookings = useMemo(() => {
     const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -271,13 +397,89 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
   const handleStatusChange = async (bookingId, newStatus) => {
     setUpdatingId(bookingId);
     try {
+      const targetBk = bookings.find((b) => b.id === bookingId);
+      const prevStatus = targetBk?.status || 'Pending';
       await StorageService.updateBookingStatus(bookingId, newStatus);
+
+      let actionType = 'confirmed';
+      if (newStatus === 'Confirmed') actionType = 'confirmed';
+      else if (newStatus === 'Pending') {
+        actionType = ['confirmed', 'ongoing', 'completed'].includes(prevStatus.toLowerCase())
+          ? 're_pending'
+          : 'pending';
+      } else if (newStatus === 'Cancelled') actionType = 'cancelled';
+      else actionType = newStatus.toLowerCase();
+
+      await StorageService.logBookingAudit({
+        bookingId,
+        actionType,
+        previousStatus: prevStatus,
+        newStatus,
+        actorRole: isRoot ? 'root_admin' : 'normal_admin',
+        actorName: currentAdmin?.name || (isRoot ? 'Root Admin' : 'Normal Admin'),
+        actorEmail: currentAdmin?.email || '',
+        actorPhone: currentAdmin?.phone || '',
+        customerName: targetBk?.customerName || targetBk?.fullName || 'Guest Customer',
+        customerEmail: targetBk?.customerEmail || targetBk?.email || '',
+        customerPhone: targetBk?.customerPhone || targetBk?.phone || '',
+        customerWhatsapp: targetBk?.customerWhatsapp || targetBk?.whatsapp || targetBk?.customerPhone || targetBk?.phone || '',
+        itemTitle: targetBk?.itemTitle || targetBk?.hotelName || targetBk?.packageTitle || 'Travel Booking',
+        totalPrice: Number(targetBk?.totalPrice || 0),
+        details: {
+          checkInDate: targetBk?.checkInDate || targetBk?.travelDate || '',
+          checkOutDate: targetBk?.checkOutDate || ''
+        }
+      });
+
       onShowToast?.(
         `Booking #${bookingId} → ${newStatus} (Realtime synced)`
       );
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const handleDeleteBooking = async (bk) => {
+    if (!isRoot) {
+      onShowToast?.('শুধুমাত্র রুট অ্যাডমিন বুকিং ডিলিট করতে পারবেন।');
+      return;
+    }
+    if (!window.confirm(`Booking #${bk.id} ডিলিট করতে চান?`)) return;
+    await StorageService.logBookingAudit({
+      bookingId: bk.id,
+      actionType: 'deleted',
+      previousStatus: bk.status || 'Pending',
+      newStatus: 'Deleted',
+      actorRole: 'root_admin',
+      actorName: currentAdmin?.name || 'Root Admin',
+      actorEmail: currentAdmin?.email || '',
+      actorPhone: currentAdmin?.phone || '',
+      customerName: bk.customerName || bk.fullName || 'Guest Customer',
+      customerEmail: bk.customerEmail || bk.email || '',
+      customerPhone: bk.customerPhone || bk.phone || '',
+      customerWhatsapp: bk.customerWhatsapp || bk.whatsapp || bk.customerPhone || bk.phone || '',
+      itemTitle: bk.itemTitle || bk.hotelName || bk.packageTitle || 'Travel Booking',
+      totalPrice: Number(bk.totalPrice || 0),
+      details: {
+        checkInDate: bk.checkInDate || bk.travelDate || '',
+        checkOutDate: bk.checkOutDate || ''
+      }
+    });
+    await StorageService.deleteBooking(bk);
+    onShowToast?.(`Booking #${bk.id} ডিলিট করা হয়েছে।`);
+  };
+
+  const handleDeleteAuditLog = async (logId) => {
+    if (!isRoot) return;
+    await StorageService.deleteBookingAuditLog(logId);
+    onShowToast?.('লগ এন্ট্রি ডিলিট করা হয়েছে।');
+  };
+
+  const handleClearAuditLogs = async () => {
+    if (!isRoot) return;
+    if (!window.confirm('আপনি কি নিশ্চিত যে সব অডিট লগ ক্যাশ ক্লিয়ার করতে চান?')) return;
+    await StorageService.clearBookingAuditLogs();
+    onShowToast?.('সব অডিট লগ ক্যাশ ক্লিয়ার করা হয়েছে।');
   };
 
   const handleSavePayment = async (bookingId) => {
@@ -606,6 +808,280 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
             </div>
           </div>
 
+          {/* 4 Interactive Realtime Audit & Activity Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Card 1: Customer Cancelled Orders */}
+            <button
+              type="button"
+              onClick={() => setActiveAuditModal('customer-cancelled')}
+              className={`text-left p-5 rounded-3xl border transition-all cursor-pointer hover:border-rose-400/60 hover:-translate-y-0.5 ${cardBg}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-400 uppercase">Customer Cancelled Orders</span>
+                <XCircle className="w-5 h-5 text-rose-400" />
+              </div>
+              <p className="mt-2.5 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                {auditStats.customerCancelledLogs.length}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">
+                কাস্টমার নিজে ক্যানসেল করেছে • ক্লিক করে বিস্তারিত দেখুন
+              </p>
+            </button>
+
+            {/* Card 2: Order Confirm / Pending / Cancel / Delete History */}
+            <button
+              type="button"
+              onClick={() => setActiveAuditModal('order-history')}
+              className={`text-left p-5 rounded-3xl border transition-all cursor-pointer hover:border-[#69EBDA]/60 hover:-translate-y-0.5 ${cardBg}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#69EBDA] uppercase">Order Action History</span>
+                <History className="w-5 h-5 text-[#69EBDA]" />
+              </div>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs font-black">
+                <span className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-400">
+                  Confirm: {auditStats.confirmedCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-400">
+                  Pending: {auditStats.pendingCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl bg-orange-500/15 text-orange-400">
+                  Re-Pending: {auditStats.rePendingCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-400">
+                  Cancel/Del: {auditStats.adminCancelledCount + auditStats.deletedCount}
+                </span>
+              </div>
+              <p className="mt-2 text-[11px] font-bold text-slate-400">
+                প্রতিটি অর্ডারের কনফার্ম, পেন্ডিং, ক্যানসেল ও ডিলিট হিস্ট্রি দেখুন
+              </p>
+            </button>
+
+            {/* Card 3: Admin Actions Breakdown */}
+            <button
+              type="button"
+              onClick={() => setActiveAuditModal('admin-actions')}
+              className={`text-left p-5 rounded-3xl border transition-all cursor-pointer hover:border-cyan-400/60 hover:-translate-y-0.5 ${cardBg}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-400 uppercase">Admin Actions Report</span>
+                <UserCheck className="w-5 h-5 text-cyan-400" />
+              </div>
+              <p className="mt-2.5 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                {auditStats.confirmedCount + auditStats.adminCancelledCount + auditStats.deletedCount}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">
+                কনফার্ম: {auditStats.confirmedCount} • ক্যানসেল: {auditStats.adminCancelledCount} • ডিলিট: {auditStats.deletedCount} (ক্লিক করুন)
+              </p>
+            </button>
+
+            {/* Card 4: Repeat Customers */}
+            <button
+              type="button"
+              onClick={() => setActiveAuditModal('repeat-customers')}
+              className={`text-left p-5 rounded-3xl border transition-all cursor-pointer hover:border-amber-400/60 hover:-translate-y-0.5 ${cardBg}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-400 uppercase">Repeat Customers</span>
+                <Users className="w-5 h-5 text-amber-400" />
+              </div>
+              <p className="mt-2.5 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                {crmData.repeatCustomers.length}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">
+                একাধিকবার বুকিং করা কাস্টমার • ক্লিক করে তালিকা দেখুন
+              </p>
+            </button>
+          </div>
+
+          {/* Live Website Visitors Card (Users vs Non-Users) */}
+          <button
+            type="button"
+            onClick={() => setActiveAuditModal('live-visitors')}
+            className={`w-full text-left p-5 rounded-3xl border transition-all cursor-pointer hover:border-emerald-400/60 hover:-translate-y-0.5 ${cardBg}`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <Globe className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
+                      Live Website Visitors
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-black uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="mt-1 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                    {liveVisitors.totalLive} জন লাইভ ভিজিটর
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                    এই মুহূর্তে ওয়েবসাইটে সক্রিয় আছেন • ক্লিক করে বিস্তারিত তালিকা দেখুন
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="px-4 py-2.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 min-w-[135px]">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 block">
+                    Logged-in Users
+                  </span>
+                  <span className="text-xl font-black text-slate-900 dark:text-white">
+                    {liveVisitors.usersCount}
+                  </span>
+                </div>
+                <div className="px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 min-w-[135px]">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 block">
+                    Non-Users (Guests)
+                  </span>
+                  <span className="text-xl font-black text-slate-900 dark:text-white">
+                    {liveVisitors.guestsCount}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Realtime System Ping, Database Memory & Performance Card */}
+          <div className={`p-5 rounded-3xl border transition-all ${cardBg}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                  <Server className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-cyan-400 uppercase tracking-wider">
+                      Website Ping &amp; Database Memory
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-black uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      10s REALTIME
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                    {systemHealth?.checkedAt
+                      ? `Last Sync: ${new Date(systemHealth.checkedAt).toLocaleTimeString()}`
+                      : 'Measuring live telemetry...'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refreshSystemHealth}
+                  disabled={isRefreshingHealth}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-700 text-slate-200 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingHealth ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveAuditModal('system-health')}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                  <span>Table Details</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+              {/* 1. Website Ping */}
+              <div className="p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Website Ping
+                  </span>
+                  <Wifi className={`w-4 h-4 ${
+                    systemHealth?.web?.status === 'optimal'
+                      ? 'text-emerald-400'
+                      : systemHealth?.web?.status === 'moderate'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                  }`} />
+                </div>
+                <p className="mt-1.5 text-xl font-black text-slate-900 dark:text-white">
+                  {systemHealth?.web?.pingMs !== null && systemHealth?.web?.pingMs !== undefined
+                    ? `${systemHealth.web.pingMs} ms`
+                    : 'Offline'}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 mt-0.5 capitalize">
+                  Status: {systemHealth?.web?.status || 'checking'} • {systemHealth?.browser?.networkType || 'WIFI'}
+                </p>
+              </div>
+
+              {/* 2. Database Ping & Connections */}
+              <div className="p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Database Ping
+                  </span>
+                  <Activity className={`w-4 h-4 ${systemHealth?.db?.connected ? 'text-emerald-400' : 'text-rose-400'}`} />
+                </div>
+                <p className="mt-1.5 text-xl font-black text-slate-900 dark:text-white">
+                  {systemHealth?.db?.dbPingMs !== null && systemHealth?.db?.dbPingMs !== undefined
+                    ? `${systemHealth.db.dbPingMs} ms`
+                    : 'Disconnected'}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                  Active Conn: {systemHealth?.db?.activeConnections ?? 0}
+                  {systemHealth?.db?.cacheHitRatio !== null && systemHealth?.db?.cacheHitRatio !== undefined
+                    ? ` • Cache Hit: ${systemHealth.db.cacheHitRatio}%`
+                    : ''}
+                </p>
+              </div>
+
+              {/* 3. Database Memory / Storage */}
+              <div className="p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Database Memory
+                  </span>
+                  <HardDrive className="w-4 h-4 text-purple-400" />
+                </div>
+                <p className="mt-1.5 text-xl font-black text-slate-900 dark:text-white">
+                  {systemHealth?.db?.dbSizePretty || 'Checking...'}
+                </p>
+                <div className="mt-1.5 w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
+                    style={{ width: `${Math.max(2, systemHealth?.db?.usagePercent || 0)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">
+                  {systemHealth?.db?.usagePercent ?? 0}% of 500 MB • {systemHealth?.db?.totalRows ?? 0} Total Rows
+                </p>
+              </div>
+
+              {/* 4. Client Runtime Memory & Cache */}
+              <div className="p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Client Memory &amp; Cache
+                  </span>
+                  <Cpu className="w-4 h-4 text-amber-400" />
+                </div>
+                <p className="mt-1.5 text-xl font-black text-slate-900 dark:text-white">
+                  {systemHealth?.browser?.heapUsedMB !== null && systemHealth?.browser?.heapUsedMB !== undefined
+                    ? `${systemHealth.browser.heapUsedMB} MB`
+                    : `${systemHealth?.browser?.localStorageKB ?? 0} KB`}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                  {systemHealth?.browser?.heapLimitMB
+                    ? `JS Heap / ${systemHealth.browser.heapLimitMB} MB • `
+                    : ''}
+                  Local Cache: {systemHealth?.browser?.localStorageKB ?? 0} KB
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Interactive Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Monthly Revenue vs Expenses Bar Chart */}
@@ -856,14 +1332,16 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
                               <FileText className="w-3.5 h-3.5" />
                               <span>Invoice</span>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => StorageService.deleteBooking(bk)}
-                              className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isRoot && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBooking(bk)}
+                                className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 cursor-pointer"
+                                title="Delete (Root Admin Only)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1320,9 +1798,7 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
             >
               <div className="flex items-start justify-between border-b border-slate-200 pb-4">
                 <div className="flex items-center gap-3">
-                  {branding?.logoUrl && (
-                    <img src={branding.logoUrl} alt="Agency Logo" className="h-10 w-auto object-contain" />
-                  )}
+                  <img src={branding?.logoUrl || '/stb-logo.png'} alt="STB Agency Logo" className="h-10 w-auto object-contain" />
                   <div>
                     <h2 className="text-xl font-black text-slate-900">
                       {branding?.brandName || 'Aetheria Travels'}
@@ -1633,6 +2109,611 @@ export const AdminExecutiveDashboard = ({ mode = 'dashboard', language = 'bn', i
                   <FileText className="w-3.5 h-3.5" />
                   <span>Invoice</span>
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* AUDIT MODAL 1: CUSTOMER CANCELLED ORDERS */}
+        {activeAuditModal === 'customer-cancelled' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-4xl max-h-[88vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${
+                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <XCircle className="w-5 h-5 text-rose-400" />
+                    <span>Customer Cancelled Orders ({auditStats.customerCancelledLogs.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    যেসব কাস্টমার নিজেরা অর্ডার ক্যানসেল করেছেন তাদের সম্পূর্ণ তথ্য
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isRoot && auditLogs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAuditLogs}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-extrabold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Clear Cache</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveAuditModal(null)}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-400 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-3">
+                {auditStats.customerCancelledLogs.length === 0 ? (
+                  <p className="py-12 text-center text-sm font-bold text-slate-400">
+                    এখনো কোনো কাস্টমার অর্ডার ক্যানসেল করেননি।
+                  </p>
+                ) : (
+                  auditStats.customerCancelledLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-black text-[#69EBDA]">#{log.bookingId}</span>
+                          <span className="font-black text-sm text-slate-900 dark:text-white">
+                            {log.customerName || 'Guest Customer'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400">
+                            Cancelled by Customer
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          {log.itemTitle} • {formatBDT(log.totalPrice)}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                          {log.customerEmail && (
+                            <span className="inline-flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-cyan-400" /> {log.customerEmail}
+                            </span>
+                          )}
+                          {log.customerPhone && (
+                            <span className="inline-flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-emerald-400" /> Phone: {log.customerPhone}
+                            </span>
+                          )}
+                          {log.customerWhatsapp && (
+                            <span className="inline-flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3 text-emerald-400" /> WhatsApp: {log.customerWhatsapp}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Check-in: {log.details?.checkInDate || 'N/A'} • Cancelled At: {new Date(log.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {log.customerWhatsapp && (
+                          <a
+                            href={`https://wa.me/${String(log.customerWhatsapp).replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold inline-flex items-center gap-1"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+                        {isRoot && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAuditLog(log.id)}
+                            className="p-2 rounded-xl bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 cursor-pointer"
+                            title="Delete Log (Root Admin Only)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* AUDIT MODAL 2: ORDER CONFIRM / PENDING / RE-PENDING / CANCEL / DELETE HISTORY */}
+        {activeAuditModal === 'order-history' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-4xl max-h-[88vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${
+                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <History className="w-5 h-5 text-[#69EBDA]" />
+                    <span>Order Status &amp; Action History ({auditStats.orderGroups.length} Orders)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    একটি অর্ডার কতবার কনফার্ম, পেন্ডিং, রি-পেন্ডিং, ক্যানসেল ও ডিলিট হয়েছে তার সম্পূর্ণ বিবরণ
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isRoot && auditLogs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAuditLogs}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-extrabold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Clear Cache</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveAuditModal(null)}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-400 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-4">
+                {auditStats.orderGroups.length === 0 ? (
+                  <p className="py-12 text-center text-sm font-bold text-slate-400">
+                    এখনো কোনো অ্যাডমিন অ্যাকশন রেকর্ড হয়নি।
+                  </p>
+                ) : (
+                  auditStats.orderGroups.map((grp) => (
+                    <div
+                      key={grp.bookingId}
+                      className={`p-4 rounded-2xl border space-y-3 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-[#69EBDA]">#{grp.bookingId}</span>
+                            <span className="font-black text-sm text-slate-900 dark:text-white">
+                              {grp.customerName}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {grp.itemTitle} • {formatBDT(grp.totalPrice)} • {grp.customerPhone || grp.customerEmail || ''}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[11px] font-black">
+                          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400">
+                            Confirm: {grp.confirmedTimes}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-400">
+                            Pending: {grp.pendingTimes}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-lg bg-orange-500/15 text-orange-400">
+                            Re-Pending: {grp.rePendingTimes}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-400">
+                            Cancel: {grp.cancelledTimes} • Del: {grp.deletedTimes}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-slate-800">
+                        {grp.logs.map((l) => (
+                          <div key={l.id} className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-700 dark:text-slate-200">
+                                {l.previousStatus || 'Pending'} → {l.newStatus}
+                              </span>
+                              <span className="text-[11px] text-slate-400">
+                                ({l.actorName || 'Admin'} • {l.actorRole === 'root_admin' ? 'Root Admin' : 'Normal Admin'})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(l.createdAt).toLocaleString()}
+                              </span>
+                              {isRoot && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAuditLog(l.id)}
+                                  className="p-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 cursor-pointer"
+                                  title="Delete Log (Root Admin Only)"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* AUDIT MODAL 3: ADMIN ACTIONS REPORT */}
+        {activeAuditModal === 'admin-actions' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-4xl max-h-[88vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${
+                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-cyan-400" />
+                    <span>Admin Actions Report ({auditStats.adminLogs.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    কোন অ্যাডমিন কার বুকিং কনফার্ম, পেন্ডিং, ক্যানসেল বা ডিলিট করেছেন তার বিস্তারিত লগ
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isRoot && auditLogs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAuditLogs}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-extrabold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Clear Cache</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveAuditModal(null)}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-400 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-3">
+                {auditStats.adminLogs.length === 0 ? (
+                  <p className="py-12 text-center text-sm font-bold text-slate-400">
+                    এখনো কোনো অ্যাডমিন অ্যাকশন রেকর্ড হয়নি।
+                  </p>
+                ) : (
+                  auditStats.adminLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            log.actorRole === 'root_admin'
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : 'bg-cyan-500/20 text-cyan-400'
+                          }`}>
+                            {log.actorRole === 'root_admin' ? 'Root Admin' : 'Normal Admin'}: {log.actorName || 'Admin'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            log.actionType === 'confirmed'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : log.actionType === 'deleted' || log.actionType === 'cancelled'
+                              ? 'bg-rose-500/15 text-rose-400'
+                              : 'bg-amber-500/15 text-amber-400'
+                          }`}>
+                            {log.actionType === 're_pending' ? 'Confirmed → Pending' : log.newStatus}
+                          </span>
+                          <span className="text-[11px] font-black text-[#69EBDA]">#{log.bookingId}</span>
+                        </div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          Customer: {log.customerName || 'Guest'} • {log.itemTitle} ({formatBDT(log.totalPrice)})
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {log.customerEmail ? `${log.customerEmail} • ` : ''}{log.customerPhone || ''} • {new Date(log.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {isRoot && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAuditLog(log.id)}
+                          className="p-2 rounded-xl bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 cursor-pointer self-end sm:self-center shrink-0"
+                          title="Delete Log (Root Admin Only)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* AUDIT MODAL 4: REPEAT CUSTOMERS */}
+        {activeAuditModal === 'repeat-customers' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-4xl max-h-[88vh] rounded-3xl border shadow-2xl overflow-hidden flex flex-col ${
+                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-amber-400" />
+                    <span>Repeat Customers ({crmData.repeatCustomers.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    যেসব কাস্টমার ২ বার বা তার বেশি বুকিং করেছেন তাদের নাম, Gmail, ফোন ও অন্যান্য তথ্য
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveAuditModal(null)}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-400 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-3">
+                {crmData.repeatCustomers.length === 0 ? (
+                  <p className="py-12 text-center text-sm font-bold text-slate-400">
+                    এখনো কোনো রিপিট কাস্টমার পাওয়া যায়নি।
+                  </p>
+                ) : (
+                  crmData.repeatCustomers.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-sm text-slate-900 dark:text-white">
+                            {c.name}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-400">
+                            {c.bookingsCount} Bookings
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-400">
+                            Confirmed Spend: {formatBDT(c.totalSpend)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                          {c.email && (
+                            <span className="inline-flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-cyan-400" /> {c.email}
+                            </span>
+                          )}
+                          {c.phone && (
+                            <span className="inline-flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-emerald-400" /> Phone: {c.phone}
+                            </span>
+                          )}
+                          {c.whatsapp && (
+                            <span className="inline-flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3 text-emerald-400" /> WhatsApp: {c.whatsapp}
+                            </span>
+                          )}
+                        </div>
+
+                        {c.recentServices?.length > 0 && (
+                          <p className="text-[11px] text-slate-400 line-clamp-2">
+                            Services: {c.recentServices.join(' • ')}
+                            {c.lastBookingDate ? ` • Latest: ${c.lastBookingDate}` : ''}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {c.whatsapp && (
+                          <a
+                            href={`https://wa.me/${String(c.whatsapp).replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 text-xs font-bold inline-flex items-center gap-1"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+                        {c.phone && (
+                          <a
+                            href={`tel:${String(c.phone).replace(/[^0-9+]/g, '')}`}
+                            className="px-3 py-1.5 rounded-xl bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/25 text-xs font-bold inline-flex items-center gap-1"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Call</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* 5. Live Website Visitors Modal */}
+        {activeAuditModal === 'live-visitors' && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden ${cardBg}`}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/70 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <Activity className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                      Live Website Visitors ({liveVisitors.totalLive})
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Users: {liveVisitors.usersCount} • Non-Users (Guests): {liveVisitors.guestsCount}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveAuditModal(null)}
+                  className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 max-h-[65vh] overflow-y-auto space-y-3">
+                {liveVisitors.visitors.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-slate-400 font-semibold">
+                    এই মুহূর্তে কোনো লাইভ ভিজিটর পাওয়া যায়নি।
+                  </div>
+                ) : (
+                  liveVisitors.visitors.map((v) => {
+                    const isUser = v.visitor_type === 'user';
+                    return (
+                      <div
+                        key={v.session_id}
+                        className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${
+                                isUser
+                                  ? 'bg-cyan-500/15 text-cyan-400'
+                                  : 'bg-amber-500/15 text-amber-400'
+                              }`}
+                            >
+                              {isUser ? 'User' : 'Non-User (Guest)'}
+                            </span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white">
+                              {isUser ? (v.user_name || v.user_email) : 'Guest Visitor'}
+                            </span>
+                          </div>
+                          {isUser && v.user_email && (
+                            <p className="text-xs text-slate-400">{v.user_email}</p>
+                          )}
+                          <p className="text-[11px] text-slate-400">
+                            Page: <span className="font-bold text-slate-300">{v.current_path || '/'}</span>
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Active Now
+                          </span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            {v.last_seen ? new Date(v.last_seen).toLocaleTimeString() : 'Just now'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* 6. Realtime System Ping & Database Memory Details Modal */}
+        {activeAuditModal === 'system-health' && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden ${cardBg}`}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/70 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <Database className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                      Database Memory &amp; System Telemetry
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      DB Size: {systemHealth?.db?.dbSizePretty || 'N/A'} • Total Rows: {systemHealth?.db?.totalRows ?? 0} • Ping: {systemHealth?.web?.pingMs ?? '-'} ms
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveAuditModal(null)}
+                  className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 max-h-[65vh] overflow-y-auto space-y-3">
+                {!systemHealth?.db?.rpcAvailable && (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 font-semibold">
+                    সম্পূর্ণ PostgreSQL মেমরি ও টেবিল সাইজ দেখতে Supabase SQL Editor-এ <code className="font-mono font-bold">get_database_health_stats()</code> SQL ফাংশনটি রান করুন।
+                  </div>
+                )}
+
+                {(!systemHealth?.db?.tables || systemHealth.db.tables.length === 0) ? (
+                  <div className="py-10 text-center text-sm text-slate-400 font-semibold">
+                    কোনো টেবিল ডেটা পাওয়া যায়নি।
+                  </div>
+                ) : (
+                  systemHealth.db.tables.map((tbl) => (
+                    <div
+                      key={tbl.table_name}
+                      className="p-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 flex items-center justify-between gap-3"
+                    >
+                      <div>
+                        <p className="text-sm font-black text-slate-900 dark:text-white font-mono">
+                          {tbl.table_name}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Rows: <span className="font-bold text-cyan-400">{tbl.row_count}</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="px-2.5 py-1 rounded-xl bg-purple-500/15 text-purple-300 text-xs font-black">
+                          {tbl.total_pretty || SystemHealthService.formatBytes(tbl.total_bytes)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </motion.div>
           </div>

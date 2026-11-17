@@ -136,7 +136,7 @@ export const AuthModal = () => {
       setIsLoading(false);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.message || 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।');
+      setErrorMessage(err.message || 'Unable to complete Google sign-in.');
     }
   };
 
@@ -145,7 +145,7 @@ export const AuthModal = () => {
     e.preventDefault();
     setErrorMessage('');
     if (!loginIdentifier || !loginPassword) {
-      setErrorMessage('ইমেইল এবং পাসওয়ার্ড উভয়ই পূরণ করুন।');
+      setErrorMessage('Please enter both email and password.');
       return;
     }
 
@@ -155,7 +155,7 @@ export const AuthModal = () => {
       setIsLoading(false);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.message || 'ভুল তথ্য প্রদান করা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      setErrorMessage(err.message || 'Invalid credentials provided. Please try again.');
     }
   };
 
@@ -165,17 +165,17 @@ export const AuthModal = () => {
     setErrorMessage('');
 
     if (!signupName || !signupEmail || !signupPhone || !signupPassword) {
-      setErrorMessage('অনুগ্রহ করে সব তথ্য সঠিকভাবে পূরণ করুন।');
+      setErrorMessage('Please fill in all information correctly.');
       return;
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      setErrorMessage('পাসওয়ার্ড দুটি মেলেনি। পুনরায় যাচাই করুন।');
+      setErrorMessage('Passwords do not match. Please verify again.');
       return;
     }
 
     if (!termsAccepted) {
-      setErrorMessage('অনুগ্রহ করে সেবার শর্তাবলী গ্রহণ করুন।');
+      setErrorMessage('Please accept the terms of service.');
       return;
     }
 
@@ -190,7 +190,7 @@ export const AuthModal = () => {
       setIsLoading(false);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.message || 'অ্যাকাউন্ট তৈরি করা সম্ভব হয়নি। আবার চেষ্টা করুন।');
+      setErrorMessage(err.message || 'Unable to create account. Please try again.');
     }
   };
 
@@ -199,13 +199,13 @@ export const AuthModal = () => {
     e.preventDefault();
     setErrorMessage('');
     if (!phoneNumber) {
-      setErrorMessage('অনুগ্রহ করে আপনার মোবাইল নম্বরটি লিখুন।');
+      setErrorMessage('Please enter your mobile number.');
       return;
     }
     setOtpStep(2);
     setCountdown(59);
     setIsTimerActive(true);
-    setSuccessMessage(`${phoneCountryCode} ${phoneNumber} নম্বরে ডেমো ৬-সংখ্যার ওটিপি কোড [690248] পাঠানো হয়েছে`);
+    setSuccessMessage(`Demo 6-digit OTP code [690248] has been sent to ${phoneCountryCode} ${phoneNumber}`);
   };
 
   // Handle OTP digit change
@@ -230,7 +230,7 @@ export const AuthModal = () => {
     setErrorMessage('');
     const fullCode = otpDigits.join('');
     if (fullCode.length !== 6) {
-      setErrorMessage('অনুগ্রহ করে পূর্ণ ৬-সংখ্যার ভেরিফিকেশন কোডটি লিখুন।');
+      setErrorMessage('Please enter the full 6-digit verification code.');
       return;
     }
 
@@ -240,7 +240,7 @@ export const AuthModal = () => {
       setIsLoading(false);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage('ভুল ওটিপি কোড। যাচাই করতে 690248 লিখুন।');
+      setErrorMessage('Invalid OTP code. Enter 690248 to verify.');
     }
   };
 
@@ -249,7 +249,7 @@ export const AuthModal = () => {
     e.preventDefault();
     setErrorMessage('');
     if (!forgotIdentifier || !forgotIdentifier.includes('@')) {
-      setErrorMessage('অনুগ্রহ করে আপনার সঠিক নিবন্ধিত ইমেইল ঠিকানাটি লিখুন।');
+      setErrorMessage('Please enter your valid registered email address.');
       return;
     }
     try {
@@ -257,10 +257,10 @@ export const AuthModal = () => {
       await resetPassword(forgotIdentifier);
       setIsLoading(false);
       setForgotStep(3);
-      setSuccessMessage(`${forgotIdentifier} ঠিকানায় পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে। আপনার ইমেইল চেক করুন।`);
+      setSuccessMessage(`Password reset link has been sent to ${forgotIdentifier}. Please check your email.`);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage(err.message || 'পাসওয়ার্ড রিসেট ইমেইল পাঠানো সম্ভব হয়নি।');
+      setErrorMessage(err.message || 'Unable to send password reset email.');
     }
   };
 
@@ -268,11 +268,11 @@ export const AuthModal = () => {
     e.preventDefault();
     setErrorMessage('');
     if (!newPassword || !confirmNewPassword) {
-      setErrorMessage('অনুগ্রহ করে আপনার নতুন পাসওয়ার্ড লিখুন ও নিশ্চিত করুন।');
+      setErrorMessage('Please enter and confirm your new password.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setErrorMessage('পাসওয়ার্ড মেলেনি।');
+      setErrorMessage('Passwords do not match.');
       return;
     }
     setForgotStep(3);
@@ -309,30 +309,30 @@ export const AuthModal = () => {
             <div className="p-4 sm:p-5 pb-3 relative z-10 shrink-0 border-b border-white/15 dark:border-white/10">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 text-[#69EBDA] text-[11px] font-bold mb-2">
                 <Sparkles className="w-3 h-3" />
-                <span>এথেরিয়া ট্রাভেলার পাস</span>
+                <span>Etheria Traveler Pass</span>
               </div>
 
               <h2 className="text-xl sm:text-2xl font-extrabold text-white font-['Outfit',sans-serif]">
-                {activeTab === 'login' && <span key="h-login">স্বাগতম</span>}
-                {activeTab === 'signup' && <span key="h-signup">নতুন অ্যাকাউন্ট তৈরি করুন</span>}
-                {activeTab === 'phone' && <span key="h-phone">তাৎক্ষণিক মোবাইল লগইন</span>}
-                {activeTab === 'forgot' && <span key="h-forgot">পাসওয়ার্ড রিসেট করুন</span>}
+                {activeTab === 'login' && <span key="h-login">Welcome Back</span>}
+                {activeTab === 'signup' && <span key="h-signup">Create New Account</span>}
+                {activeTab === 'phone' && <span key="h-phone">Instant Mobile Login</span>}
+                {activeTab === 'forgot' && <span key="h-forgot">Reset Password</span>}
               </h2>
 
               <p className="mt-1 text-slate-100 dark:text-slate-300 text-xs sm:text-sm font-medium">
-                {activeTab === 'login' && <span key="p-login">আপনার সংরক্ষিত ভ্রমণ পরিকল্পনা, বুকিং স্ট্যাটাস ও তথ্য দেখুন।</span>}
-                {activeTab === 'signup' && <span key="p-signup">অভিজাত ভ্রমণকারীদের ক্লাবে যোগ দিন এবং পান বিশেষ সুযোগ-সুবিধা।</span>}
-                {activeTab === 'phone' && <span key="p-phone">পাসওয়ার্ডের ঝামেলা ছাড়া সুরক্ষিত এসএমএস ওটিপি দিয়ে সরাসরি লগইন করুন।</span>}
-                {activeTab === 'forgot' && <span key="p-forgot">আপনার অ্যাকাউন্টের নিয়ন্ত্রণ নিরাপদে ফিরে পেতে পরিচয় যাচাই করুন।</span>}
+                {activeTab === 'login' && <span key="p-login">View your saved itineraries, booking statuses & details.</span>}
+                {activeTab === 'signup' && <span key="p-signup">Join the elite travelers club and enjoy exclusive privileges.</span>}
+                {activeTab === 'phone' && <span key="p-phone">Log in directly via secure SMS OTP without needing a password.</span>}
+                {activeTab === 'forgot' && <span key="p-forgot">Verify your identity to safely regain access to your account.</span>}
               </p>
 
               {/* Tab Selector with Shared layoutId Sliding Pill */}
               {activeTab !== 'forgot' && (
                 <div className="mt-5 p-1 rounded-2xl bg-slate-800/50 dark:bg-slate-950/50 backdrop-blur-md border border-white/20 dark:border-white/10 grid grid-cols-3 gap-1">
                   {[
-                    { id: 'login', label: 'সাইন ইন', icon: Mail },
-                    { id: 'signup', label: 'সাইন আপ', icon: User },
-                    { id: 'phone', label: 'মোবাইল ওটিপি', icon: Smartphone }
+                    { id: 'login', label: 'Sign In', icon: Mail },
+                    { id: 'signup', label: 'Sign Up', icon: User },
+                    { id: 'phone', label: 'Mobile OTP', icon: Smartphone }
                   ].map((tab) => {
                     const TabIcon = tab.icon;
                     const isTabActive = activeTab === tab.id;
@@ -405,20 +405,20 @@ export const AuthModal = () => {
                 className="w-full py-3 px-4 min-h-[46px] rounded-2xl bg-slate-800/60 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 text-white border border-white/20 shadow-sm flex items-center justify-center gap-3 text-xs sm:text-sm font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               >
                 <GoogleIcon />
-                <span>গুগল দিয়ে প্রবেশ করুন</span>
+                <span>Continue with Google</span>
               </button>
 
               <div className="relative flex items-center justify-center my-4">
                 <div className="border-t border-white/15 dark:border-white/10 w-full" />
                 <span className="bg-[#5C6977] dark:bg-slate-900 px-3 text-[11px] font-bold text-slate-200 uppercase tracking-wider">
-                  অথবা ইমেইল ও পাসওয়ার্ড
+                  Or with email & password
                 </span>
               </div>
 
               {/* Email / Phone Input */}
               <div className="space-y-1.5">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                  ইমেইল বা মোবাইল নম্বর
+                  Email or Mobile Number
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -427,7 +427,7 @@ export const AuthModal = () => {
                     required
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="যেমন: name@example.com"
+                    placeholder="e.g. name@example.com"
                     className="w-full pl-10 pr-4 py-3 min-h-[46px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#69EBDA] focus:ring-1 focus:ring-[#69EBDA] transition-all"
                   />
                 </div>
@@ -437,7 +437,7 @@ export const AuthModal = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                    পাসওয়ার্ড
+                    Password
                   </label>
                   <button
                     type="button"
@@ -448,7 +448,7 @@ export const AuthModal = () => {
                     }}
                     className="text-xs text-[#69EBDA] hover:underline font-semibold cursor-pointer"
                   >
-                    পাসওয়ার্ড ভুলে গেছেন?
+                    Forgot password?
                   </button>
                 </div>
                 <div className="relative flex items-center">
@@ -458,7 +458,7 @@ export const AuthModal = () => {
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="আপনার পাসওয়ার্ড লিখুন"
+                    placeholder="Enter your password"
                     className="w-full pl-10 pr-11 py-3 min-h-[46px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#69EBDA] focus:ring-1 focus:ring-[#69EBDA] transition-all"
                   />
                   <button
@@ -480,7 +480,7 @@ export const AuthModal = () => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded text-teal-500 border-white/20 focus:ring-[#69EBDA]"
                   />
-                  <span>এই ডিভাইসে লগইন মনে রাখুন</span>
+                  <span>Remember login on this device</span>
                 </label>
               </div>
 
@@ -494,7 +494,7 @@ export const AuthModal = () => {
                   <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
                 ) : (
                   <>
-                    <span>সাইন ইন করুন</span>
+                    <span>Sign In</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -517,20 +517,20 @@ export const AuthModal = () => {
                 className="w-full py-3 px-4 min-h-[46px] rounded-2xl bg-slate-800/60 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 text-white border border-white/20 shadow-sm flex items-center justify-center gap-3 text-xs sm:text-sm font-semibold transition-all duration-300 cursor-pointer"
               >
                 <GoogleIcon />
-                <span>গুগল দিয়ে সাইন আপ করুন</span>
+                <span>Sign up with Google</span>
               </button>
 
               <div className="relative flex items-center justify-center my-3">
                 <div className="border-t border-white/15 dark:border-white/10 w-full" />
                 <span className="bg-[#5C6977] dark:bg-slate-900 px-3 text-[11px] font-bold text-slate-200 uppercase tracking-wider">
-                  অথবা ইমেইল দিয়ে রেজিস্টার করুন
+                  Or register with email
                 </span>
               </div>
 
               {/* Full Name */}
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                  পূর্ণ নাম
+                  Full Name
                 </label>
                 <div className="relative flex items-center">
                   <User className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -539,7 +539,7 @@ export const AuthModal = () => {
                     required
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="যেমন: ফারহান চৌধুরী"
+                    placeholder="e.g. John Doe"
                     className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#69EBDA]"
                   />
                 </div>
@@ -548,7 +548,7 @@ export const AuthModal = () => {
               {/* Email Address */}
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                  ইমেইল ঠিকানা
+                  Email Address
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -557,7 +557,7 @@ export const AuthModal = () => {
                     required
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="যেমন: farhan@domain.com"
+                    placeholder="e.g. john@example.com"
                     className="w-full pl-10 pr-4 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#69EBDA]"
                   />
                 </div>
@@ -566,7 +566,7 @@ export const AuthModal = () => {
               {/* Phone with Country Code */}
               <div className="space-y-1">
                 <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                  মোবাইল নম্বর (হোয়াটসঅ্যাপ যুক্ত)
+                  Mobile Number (WhatsApp linked)
                 </label>
                 <div className="flex gap-2">
                   <select
@@ -598,7 +598,7 @@ export const AuthModal = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                    পাসওয়ার্ড
+                    Password
                   </label>
                   <div className="relative flex items-center">
                     <Lock className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -607,7 +607,7 @@ export const AuthModal = () => {
                       required
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="কমপক্ষে ৬ অক্ষর"
+                      placeholder="At least 6 characters"
                       className="w-full pl-10 pr-9 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs focus:outline-none focus:border-[#69EBDA]"
                     />
                     <button
@@ -622,7 +622,7 @@ export const AuthModal = () => {
 
                 <div className="space-y-1">
                   <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                    পাসওয়ার্ড নিশ্চিতকরণ
+                    Confirm Password
                   </label>
                   <div className="relative flex items-center">
                     <Lock className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -631,7 +631,7 @@ export const AuthModal = () => {
                       required
                       value={signupConfirmPassword}
                       onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                      placeholder="পাসওয়ার্ড পুনরায় লিখুন"
+                      placeholder="Re-enter password"
                       className="w-full pl-10 pr-9 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs focus:outline-none focus:border-[#69EBDA]"
                     />
                     <button
@@ -654,7 +654,7 @@ export const AuthModal = () => {
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded text-teal-500 border-white/20 focus:ring-[#69EBDA]"
                 />
-                <span>আমি এথেরিয়া ট্রাভেলসের শর্তাবলী ও গোপনীয়তা নীতি মেনে নিচ্ছি।</span>
+                <span>I agree to the Terms of Service & Privacy Policy of Etheria Travels.</span>
               </label>
 
               {/* Submit Button */}
@@ -667,7 +667,7 @@ export const AuthModal = () => {
                   <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
                 ) : (
                   <>
-                    <span>অ্যাকাউন্ট তৈরি করুন</span>
+                    <span>Create Account</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -684,7 +684,7 @@ export const AuthModal = () => {
                 <form key="otp-step-1" onSubmit={handleSendOtp} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                      আপনার নিবন্ধিত মোবাইল নম্বর লিখুন
+                      Enter your registered mobile number
                     </label>
                     <div className="flex gap-2">
                       <select
@@ -713,14 +713,14 @@ export const AuthModal = () => {
                   </div>
 
                   <p className="text-[11px] text-slate-200 dark:text-slate-400 font-medium">
-                    আমরা এসএমএসের মাধ্যমে আপনার ডিভাইসে তাৎক্ষণিক ৬-সংখ্যার ভেরিফিকেশন কোড পাঠাব।
+                    We will send an instant 6-digit verification code to your device via SMS.
                   </p>
 
                   <button
                     type="submit"
                     className="w-full py-3.5 px-4 min-h-[48px] rounded-2xl bg-gradient-to-r from-[#69EBDA] via-[#2dd4bf] to-cyan-400 text-slate-950 font-bold text-sm tracking-wide shadow-lg shadow-[#69EBDA]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
-                    <span>ভেরিফিকেশন কোড পাঠান</span>
+                    <span>Send Verification Code</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
@@ -728,14 +728,14 @@ export const AuthModal = () => {
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="text-center">
                     <span className="text-xs text-slate-200 dark:text-slate-300">
-                      কোড পাঠানো হয়েছে: <strong className="text-white">{phoneCountryCode} {phoneNumber}</strong>
+                      Code sent to: <strong className="text-white">{phoneCountryCode} {phoneNumber}</strong>
                     </span>
                     <button
                       type="button"
                       onClick={() => setOtpStep(1)}
                       className="ml-2 text-xs text-[#69EBDA] hover:underline cursor-pointer"
                     >
-                      (পরিবর্তন)
+                      (Change)
                     </button>
                   </div>
 
@@ -757,22 +757,22 @@ export const AuthModal = () => {
                   {/* Resend Timer */}
                   <div className="flex items-center justify-between text-xs text-slate-200 dark:text-slate-400">
                     {isTimerActive ? (
-                      <span>পুনরায় কোড পাঠানোর সময়: <strong className="text-white">{countdown} সেকেন্ড</strong></span>
+                      <span>Resend code in: <strong className="text-white">{countdown}s</strong></span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => {
                           setCountdown(59);
                           setIsTimerActive(true);
-                          setSuccessMessage('নতুন ডেমো ওটিপি কোড [690248] পাঠানো হয়েছে।');
+                          setSuccessMessage('New demo OTP code [690248] sent.');
                         }}
                         className="text-[#69EBDA] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
-                        <span>৬-সংখ্যার কোড পুনরায় পাঠান</span>
+                        <span>Resend 6-digit code</span>
                       </button>
                     )}
-                    <span className="text-[11px] font-mono text-[#69EBDA]">ডেমো ওটিপি: 690248</span>
+                    <span className="text-[11px] font-mono text-[#69EBDA]">Demo OTP: 690248</span>
                   </div>
 
                   <button
@@ -785,7 +785,7 @@ export const AuthModal = () => {
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        <span>যাচাই করুন ও প্রবেশ করুন</span>
+                        <span>Verify & Sign In</span>
                       </>
                     )}
                   </button>
@@ -803,7 +803,7 @@ export const AuthModal = () => {
                 <form key="forgot-step-1" onSubmit={handleForgotSubmit} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                      আপনার অ্যাকাউন্টের ইমেইল বা ফোন নম্বর লিখুন
+                      Enter your account email or phone number
                     </label>
                     <div className="relative flex items-center">
                       <Mail className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -812,7 +812,7 @@ export const AuthModal = () => {
                         required
                         value={forgotIdentifier}
                         onChange={(e) => setForgotIdentifier(e.target.value)}
-                        placeholder="যেমন: name@example.com"
+                        placeholder="e.g. name@example.com"
                         className="w-full pl-10 pr-4 py-3 min-h-[46px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-[#69EBDA]"
                       />
                     </div>
@@ -822,7 +822,7 @@ export const AuthModal = () => {
                     type="submit"
                     className="w-full py-3.5 px-4 min-h-[48px] rounded-2xl bg-gradient-to-r from-[#69EBDA] via-[#2dd4bf] to-cyan-400 text-slate-950 font-bold text-sm tracking-wide shadow-lg shadow-[#69EBDA]/30 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>রিসেট কোড পাঠান</span>
+                    <span>Send Reset Link</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
@@ -831,7 +831,7 @@ export const AuthModal = () => {
                     onClick={() => setActiveTab('login')}
                     className="w-full text-center text-xs text-slate-200 dark:text-slate-400 hover:text-white cursor-pointer"
                   >
-                    &larr; সাইন ইনে ফিরে যান
+                    &larr; Back to Sign In
                   </button>
                 </form>
               )}
@@ -840,21 +840,21 @@ export const AuthModal = () => {
                 <form onSubmit={handleResetPassword} className="space-y-3.5">
                   <div className="space-y-1">
                     <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                      ভেরিফিকেশন কোড
+                      Verification Code
                     </label>
                     <input
                       type="text"
                       required
                       value={resetCode}
                       onChange={(e) => setResetCode(e.target.value)}
-                      placeholder="৬-সংখ্যার কোড লিখুন (যেমন: 789123)"
+                      placeholder="Enter 6-digit code (e.g. 789123)"
                       className="w-full px-4 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white text-xs font-mono focus:outline-none focus:border-[#69EBDA]"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                      নতুন পাসওয়ার্ড
+                      New Password
                     </label>
                     <div className="relative flex items-center">
                       <Lock className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -863,7 +863,7 @@ export const AuthModal = () => {
                         required
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="একটি শক্তিশালী পাসওয়ার্ড তৈরি করুন"
+                        placeholder="Create a strong password"
                         className="w-full pl-10 pr-9 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white text-xs focus:outline-none focus:border-[#69EBDA]"
                       />
                       <button
@@ -878,7 +878,7 @@ export const AuthModal = () => {
 
                   <div className="space-y-1">
                     <label className="text-[11px] uppercase tracking-wider font-bold text-slate-200 dark:text-slate-300">
-                      নতুন পাসওয়ার্ড নিশ্চিত করুন
+                      Confirm New Password
                     </label>
                     <div className="relative flex items-center">
                       <Lock className="absolute left-3.5 w-4 h-4 text-[#69EBDA]" />
@@ -887,7 +887,7 @@ export const AuthModal = () => {
                         required
                         value={confirmNewPassword}
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        placeholder="পাসওয়ার্ড পুনরায় লিখুন"
+                        placeholder="Re-enter password"
                         className="w-full pl-10 pr-9 py-2.5 min-h-[44px] rounded-2xl bg-slate-800/45 dark:bg-white/5 border border-white/20 dark:border-white/15 text-white text-xs focus:outline-none focus:border-[#69EBDA]"
                       />
                       <button
@@ -905,7 +905,7 @@ export const AuthModal = () => {
                     className="w-full py-3.5 px-4 min-h-[48px] rounded-2xl bg-gradient-to-r from-[#69EBDA] via-[#2dd4bf] to-cyan-400 text-slate-950 font-bold text-sm tracking-wide shadow-lg shadow-[#69EBDA]/30 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <KeyRound className="w-4 h-4" />
-                    <span>পাসওয়ার্ড আপডেট করে প্রবেশ করুন</span>
+                    <span>Update Password & Enter</span>
                   </button>
                 </form>
               )}
@@ -916,10 +916,10 @@ export const AuthModal = () => {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-white font-['Outfit',sans-serif]">
-                    পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!
+                    Password Changed Successfully!
                   </h3>
                   <p className="text-xs text-slate-100 dark:text-slate-300 max-w-xs mx-auto">
-                    আপনার পাসওয়ার্ড নিরাপদে পরিবর্তিত হয়েছে। এখন নতুন পাসওয়ার্ড দিয়ে লগইন করতে পারেন।
+                    Your password has been securely updated. You can now log in with your new password.
                   </p>
                   <button
                     type="button"
@@ -929,7 +929,7 @@ export const AuthModal = () => {
                     }}
                     className="py-3 px-6 rounded-2xl bg-gradient-to-r from-[#69EBDA] to-cyan-400 text-slate-950 font-bold text-xs cursor-pointer"
                   >
-                    সাইন ইনে এগিয়ে যান
+                    Proceed to Sign In
                   </button>
                 </div>
               )}

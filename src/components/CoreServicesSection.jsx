@@ -19,6 +19,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
     restaurant: StorageService.getRestaurants().length
   }));
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().coreServices);
   const [disabledServiceModal, setDisabledServiceModal] = useState(null);
 
   useEffect(() => {
@@ -32,17 +33,22 @@ export const CoreServicesSection = ({ onSelectService }) => {
     const syncServicesControl = () => {
       setServicesControl(StorageService.getServicesControl());
     };
+    const syncSection = () => {
+      setSecText(StorageService.getSectionSettings().coreServices);
+    };
 
     window.addEventListener('app:hotels-updated', syncCounts);
     window.addEventListener('app:transports-updated', syncCounts);
     window.addEventListener('app:restaurants-updated', syncCounts);
     window.addEventListener('app:services-control-updated', syncServicesControl);
+    window.addEventListener('app:section-settings-updated', syncSection);
 
     return () => {
       window.removeEventListener('app:hotels-updated', syncCounts);
       window.removeEventListener('app:transports-updated', syncCounts);
       window.removeEventListener('app:restaurants-updated', syncCounts);
       window.removeEventListener('app:services-control-updated', syncServicesControl);
+      window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
 
@@ -50,7 +56,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
     {
       id: 'hotels',
       title: 'Hotels & Resorts',
-      subtitleBn: 'বিলাসবহুল হোটেল ও রিসোর্ট',
+      subtitleBn: 'Luxury Stays & Resorts',
       summary: 'Luxury stays, curated rooms, floor & bath specs with real-time calendar availability.',
       countBadge: servicesControl?.hotels === false ? 'Currently Off' : `${counts.hotels}+ Verified Stays`,
       image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
@@ -59,7 +65,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
     {
       id: 'transport',
       title: 'Transport & Vehicles',
-      subtitleBn: 'প্রাইভেট কার ও ট্যুরিস্ট যানবাহন',
+      subtitleBn: 'Private Cars & Tourist Fleet',
       summary: 'Private cars, executive microbuses, 4x4 tourist jeeps, and full scenic route coverage.',
       countBadge: servicesControl?.transport === false ? 'Currently Off' : `${counts.transport}+ Vehicles`,
       image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
@@ -68,7 +74,7 @@ export const CoreServicesSection = ({ onSelectService }) => {
     {
       id: 'restaurant',
       title: 'Restaurant & Dining',
-      subtitleBn: 'রেস্টুরেন্ট ও ৩-বেলা মিল প্ল্যান',
+      subtitleBn: 'Dining & 3-Time Meal Plans',
       summary: '3-time daily meal plans, signature buffets, traditional heritage thali, and live BBQ.',
       countBadge: servicesControl?.restaurant === false ? 'Currently Off' : `${counts.restaurant}+ Dining Plans`,
       image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
@@ -85,22 +91,30 @@ export const CoreServicesSection = ({ onSelectService }) => {
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 relative z-10">
         <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-900 dark:text-[#69EBDA] uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
-            Our Core Services
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-            আমাদের মূল সেবাসমূহ
-          </h2>
-          <p className="mt-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base max-w-xl font-medium">
-            বিলাসবহুল রিসোর্ট, প্রাইভেট ট্রান্সপোর্ট এবং প্রিমিয়াম ডাইনিং—সবকিছু এক জায়গায় লাইভ রিয়েল-টাইম বুকিং সুবিধাসহ।
-          </p>
+          {secText?.badge && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-900 dark:text-[#69EBDA] uppercase">
+              <Sparkles className="w-3.5 h-3.5" />
+              {secText.badge}
+            </div>
+          )}
+          {secText?.title && (
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+              {secText.title}
+            </h2>
+          )}
+          {secText?.subtitle && (
+            <p className="mt-3 text-slate-700 dark:text-slate-300 text-sm sm:text-base max-w-xl font-medium">
+              {secText.subtitle}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-800 dark:text-slate-200 font-bold px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-[#5C6977]/60 border border-white/40 dark:border-white/15 backdrop-blur-xl shadow-xs">
-          <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
-          <span>রিয়েল-টাইম ভেরিফায়েড সার্ভিস</span>
-        </div>
+        {secText?.trustBadge && (
+          <div className="flex items-center gap-2 text-xs text-slate-800 dark:text-slate-200 font-bold px-4 py-2.5 rounded-2xl bg-white/60 dark:bg-[#5C6977]/60 border border-white/40 dark:border-white/15 backdrop-blur-xl shadow-xs">
+            <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
+            <span>{secText.trustBadge}</span>
+          </div>
+        )}
       </div>
 
       {/* 3-Service Premium Liquid Glass Cards Grid */}

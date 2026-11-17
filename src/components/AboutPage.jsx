@@ -106,7 +106,7 @@ export const AboutPage = ({ onBack, onOpenContact }) => {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#5C6977]/95 dark:bg-slate-900/90 backdrop-blur-xl border border-[#69EBDA]/40 text-white text-xs sm:text-sm font-bold shadow-md hover:border-[#69EBDA] transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-[#69EBDA]" />
-          <span>হোমে ফিরে যান</span>
+          <span>Back to Home</span>
         </motion.button>
 
         <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-[#5C6977]/90 dark:bg-slate-900/85 backdrop-blur-xl border border-[#69EBDA]/30">

@@ -42,7 +42,14 @@ export const AdminAuthService = {
    */
   isRootAdmin: () => {
     const admin = AdminAuthService.getCurrentAdmin();
-    return Boolean(admin && admin.authenticated && (admin.role === 'root_admin' || admin.isRoot));
+    const { username: envUsername } = getEnvCredentials();
+    if (!admin || !admin.authenticated || !envUsername) return false;
+    return (
+      admin.role === 'root_admin' &&
+      admin.isRoot === true &&
+      String(admin.token || '').startsWith('root-adm-') &&
+      String(admin.username || '').trim().toLowerCase() === envUsername.toLowerCase()
+    );
   },
 
   /**

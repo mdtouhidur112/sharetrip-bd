@@ -69,7 +69,7 @@ export const HotelDetailModal = ({ hotel, onClose }) => {
         <div className="p-6 sm:p-8 space-y-6">
           <div>
             <div className="text-xs uppercase font-bold text-[#69EBDA] tracking-wider mb-1">
-              অন্তর্ভুক্ত স্যুটের ধরণ
+              Included Suite Type
             </div>
             <div className="text-base font-bold text-white">
               {hotel.roomType}
@@ -82,7 +82,7 @@ export const HotelDetailModal = ({ hotel, onClose }) => {
           {/* Amenities Grid */}
           <div>
             <div className="text-xs uppercase font-bold text-slate-200 dark:text-slate-300 tracking-wider mb-3">
-              রিসোর্টের অন্তর্ভুক্ত সুবিধাসমূহ
+              Included Resort Amenities
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {hotel.amenities.map((amenity, i) => (
@@ -100,15 +100,15 @@ export const HotelDetailModal = ({ hotel, onClose }) => {
           {/* Pricing Info */}
           <div className="p-4 rounded-2xl bg-slate-800/50 border border-white/20 flex items-center justify-between">
             <div>
-              <span className="text-xs text-slate-300 dark:text-slate-400 block font-medium">হোটেলের মূল মূল্যমান</span>
+              <span className="text-xs text-slate-300 dark:text-slate-400 block font-medium">Standard Hotel Value</span>
               <span className="text-2xl font-black text-white font-['Outfit',sans-serif]">
                 ${hotel.pricePerNight.toFixed(2)}
               </span>
-              <span className="text-xs text-slate-300 dark:text-slate-400"> / রাত (প্যাকেজে সম্পূর্ণ অন্তর্ভুক্ত)</span>
+              <span className="text-xs text-slate-300 dark:text-slate-400"> / night (Fully included in package)</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-semibold">
               <Check className="w-3.5 h-3.5" />
-              ভেরিফাইড পার্টনার
+              Verified Partner
             </div>
           </div>
         </div>
@@ -117,14 +117,14 @@ export const HotelDetailModal = ({ hotel, onClose }) => {
         <div className="p-5 bg-slate-800/60 dark:bg-slate-950/70 border-t border-white/15 dark:border-white/10 flex items-center justify-between">
           <span className="text-xs text-slate-200 dark:text-slate-400 font-medium flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#69EBDA]" />
-            প্রাপ্যতা সাপেক্ষে নিশ্চিত রুম আপগ্রেড সুবিধা
+            Complimentary room upgrade subject to availability
           </span>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onClose}
             className="px-6 py-2.5 rounded-2xl bg-slate-700/80 hover:bg-slate-700 dark:bg-white/10 hover:dark:bg-white/20 text-white text-xs sm:text-sm font-bold border border-white/20 transition-colors cursor-pointer"
           >
-            বন্ধ করুন
+            Close
           </motion.button>
         </div>
 

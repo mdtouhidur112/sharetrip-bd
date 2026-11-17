@@ -6,6 +6,7 @@ import { StorageService } from '../services/storageService';
 export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpenAllDestinations }) => {
   const [destinations, setDestinations] = useState(() => StorageService.getDestinations());
   const [allPackages, setAllPackages] = useState(() => StorageService.getPackages());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().destinations);
   const [rotationTick, setRotationTick] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollContainerRef = useRef(null);
@@ -14,12 +15,15 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
   useEffect(() => {
     const syncDestinations = () => setDestinations(StorageService.getDestinations());
     const syncPackages = () => setAllPackages(StorageService.getPackages());
+    const syncSection = () => setSecText(StorageService.getSectionSettings().destinations);
 
     window.addEventListener('app:destinations-updated', syncDestinations);
     window.addEventListener('app:packages-updated', syncPackages);
+    window.addEventListener('app:section-settings-updated', syncSection);
     return () => {
       window.removeEventListener('app:destinations-updated', syncDestinations);
       window.removeEventListener('app:packages-updated', syncPackages);
+      window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
 
@@ -75,34 +79,42 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
       {/* Section Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
-            নির্বাচিত ভূপ্রকৃতি
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif] transition-colors">
-            আপনার ভ্রমণের দিগন্ত বেছে নিন
-          </h2>
-          <p className="mt-3 text-black/70 dark:text-slate-300 text-base max-w-xl font-medium transition-colors">
-            পাহাড়চূড়ায় রোমাঞ্চকর আরোহণ, নির্জন সাগর সৈকতে অবকাশ কিংবা গভীর অরণ্যের নিস্তব্ধতায় হারিয়ে যাওয়া।
-          </p>
+          {secText?.badge && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-4 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
+              <Sparkles className="w-3.5 h-3.5" />
+              {secText.badge}
+            </div>
+          )}
+          {secText?.title && (
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif] transition-colors">
+              {secText.title}
+            </h2>
+          )}
+          {secText?.subtitle && (
+            <p className="mt-3 text-black/70 dark:text-slate-300 text-base max-w-xl font-medium transition-colors">
+              {secText.subtitle}
+            </p>
+          )}
         </div>
 
         {/* Filter All Pill + Left/Right Scroll Arrows */}
         <div className="flex items-center gap-2.5">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => (onOpenAllDestinations ? onOpenAllDestinations() : onSelectCategory('all'))}
-            className={`
-              px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-300 cursor-pointer
-              ${selectedCategory === 'all'
-                ? 'bg-[#69EBDA] text-slate-950 border border-teal-400 shadow-[0_0_15px_rgba(105,235,218,0.5)] font-extrabold'
-                : 'bg-[#5C6977]/85 hover:bg-[#5C6977] text-white border border-[#69EBDA]/35 shadow-sm'
-              }
-            `}
-          >
-            সব ভ্রমণ প্যাকেজ
-          </motion.button>
+          {secText?.buttonText && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => (onOpenAllDestinations ? onOpenAllDestinations() : onSelectCategory('all'))}
+              className={`
+                px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-300 cursor-pointer
+                ${selectedCategory === 'all'
+                  ? 'bg-[#69EBDA] text-slate-950 border border-teal-400 shadow-[0_0_15px_rgba(105,235,218,0.5)] font-extrabold'
+                  : 'bg-[#5C6977]/85 hover:bg-[#5C6977] text-white border border-[#69EBDA]/35 shadow-sm'
+                }
+              `}
+            >
+              {secText.buttonText}
+            </motion.button>
+          )}
 
           <div className="flex items-center gap-1.5">
             <button
@@ -231,7 +243,7 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
                 {/* Top-Right Exact Package Count Badge */}
                 <div className="px-3.5 py-1.5 rounded-full bg-slate-950/70 backdrop-blur-xl border border-[#69EBDA]/50 text-xs font-extrabold text-[#69EBDA] shadow-lg shrink-0 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#69EBDA] animate-pulse" />
-                  <span>{packageCount} টি প্যাকেজ</span>
+                  <span>{packageCount} Packages</span>
                 </div>
               </div>
 
@@ -265,7 +277,7 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
                         className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#69EBDA]/15 border border-[#69EBDA]/35 text-[11px] font-bold text-[#69EBDA] max-w-full"
                       >
                         <Hotel className="w-3.5 h-3.5 text-[#69EBDA] shrink-0" />
-                        <span className="truncate">রিসোর্ট: {activeSlide.resortName}</span>
+                        <span className="truncate">Resort: {activeSlide.resortName}</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -293,10 +305,10 @@ export const DestinationBentoGrid = ({ onSelectCategory, selectedCategory, onOpe
 
                   <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
                     <span className="group-hover:text-[#69EBDA] transition-colors font-medium truncate">
-                      {cat.destinationName || cat.title} ({packageCount} টি প্যাকেজ)
+                      {cat.destinationName || cat.title} ({packageCount} Packages)
                     </span>
                     <span className="text-[#69EBDA] font-bold group-hover:translate-x-1 transition-transform shrink-0 ml-2">
-                      প্যাকেজ দেখুন &rarr;
+                      View Packages &rarr;
                     </span>
                   </div>
 

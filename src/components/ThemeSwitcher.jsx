@@ -84,7 +84,7 @@ export const ThemeSwitcher = ({ className = '' }) => {
           }
         `}
         aria-label="Theme switcher"
-        title="থিম পরিবর্তন করুন"
+        title="Switch theme"
       >
         <CurrentIcon className="w-4 h-4 text-[#69EBDA] transition-transform duration-300" />
       </motion.button>

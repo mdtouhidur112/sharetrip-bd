@@ -94,12 +94,8 @@ const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
-const MONTH_NAMES_BN = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
-];
 
-export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSuccess }) => {
+export const SingleHotelDetailPage = ({ hotel: initialHotel, initialFilter = null, onBack, onBookingSuccess }) => {
   const [contactInfo, setContactInfo] = useState(() => StorageService.getContactInfo());
   useEffect(() => {
     const sync = () => setContactInfo(StorageService.getContactInfo());
@@ -144,7 +140,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     };
   }, [initialHotel?.id, initialHotel?.serviceType]);
 
-  const { user, wishlist = [], toggleWishlist } = useAuth();
+  const { user, wishlist = [], toggleWishlist, openAuthModal } = useAuth();
   const isFav = wishlist.includes(hotel.id);
   const isTransport = hotel.serviceType === 'transport';
   const isRestaurant = hotel.serviceType === 'restaurant';
@@ -233,6 +229,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
   }, [hotel.id]);
 
   const handleOpenReviewModal = (existingReview = null) => {
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
     if (existingReview) {
       setEditingReviewId(existingReview.id);
       setReviewCommentText(existingReview.comment || '');
@@ -246,30 +246,47 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
 
   const handleSubmitReview = (e) => {
     e.preventDefault();
-    if (!reviewCommentText.trim()) return;
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
+    const trimmedComment = reviewCommentText.trim();
+    if (!trimmedComment) return;
 
-    const finalRating = userPrevRating || 5;
+    const targetEditId = editingReviewId;
+    const finalRating = reviewRatingValue || userPrevRating || 5;
+
+    // Immediately hide/close the "Write Your Review" box on submit
+    setIsReviewModalOpen(false);
+    setReviewCommentText('');
+    setEditingReviewId(null);
 
     HotelReviewService.saveHotelReview(
       hotel.id,
       {
-        id: editingReviewId,
-        userName: user?.name || 'গেস্ট ট্রাভেলার',
+        id: targetEditId,
+        userName: user?.name || 'Guest Traveler',
         userAvatar: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         rating: finalRating,
-        comment: reviewCommentText.trim()
+        comment: trimmedComment
       },
       userKey
     );
 
     setHotelReviews(HotelReviewService.getHotelReviews(hotel.id));
-    setIsReviewModalOpen(false);
-    setReviewCommentText('');
-    setEditingReviewId(null);
   };
 
+  const hasUserSubmittedReview = Boolean(
+    user &&
+      hotelReviews.some(
+        (rev) =>
+          (rev.userId === userKey || rev.userKey === userKey || rev.userId === user?.id) &&
+          String(rev.comment || '').trim().length > 0
+      )
+  );
+
   const handleDeleteReview = (reviewId) => {
-    if (window.confirm('আপনি কি নিশ্চিত যে আপনার কমেন্টটি মুছে ফেলতে চান?')) {
+    if (window.confirm('Are you sure you want to delete your comment?')) {
       HotelReviewService.deleteHotelReview(hotel.id, reviewId);
       setHotelReviews(HotelReviewService.getHotelReviews(hotel.id));
       setActiveReviewMenuId(null);
@@ -286,11 +303,15 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
   const [detailHoverStar, setDetailHoverStar] = useState(0);
 
   const handleDetailCardRating = (starValue) => {
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
     const result = HotelReviewService.submitQuickRating(
       hotel.id,
       starValue,
       userKey,
-      user?.name || 'গেস্ট ট্রাভেলার'
+      user?.name || 'Guest Traveler'
     );
     setDetailRatingFeedback({
       message: result.message,
@@ -300,36 +321,110 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     setTimeout(() => setDetailRatingFeedback(null), 3200);
   };
 
-  // Booking & Calendar Date State
+  // Booking & Calendar Date State (Auto-seeded from Hero Search Filter when available)
   const todayISO = useMemo(() => formatISO(new Date()), []);
   const tomorrowISO = useMemo(() => addDaysISO(todayISO, 1), [todayISO]);
   const dayAfterTomorrowISO = useMemo(() => addDaysISO(todayISO, 2), [todayISO]);
 
-  const [checkInDate, setCheckInDate] = useState(tomorrowISO);
-  const [checkOutDate, setCheckOutDate] = useState(dayAfterTomorrowISO);
+  const isIsoDate = (val) => typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim());
+  const resolvedCheckIn = isIsoDate(initialFilter?.travelDate) ? initialFilter.travelDate.trim() : tomorrowISO;
+  const resolvedCheckOut = (() => {
+    if (isIsoDate(initialFilter?.checkOutDate) && initialFilter.checkOutDate.trim() >= resolvedCheckIn) {
+      return initialFilter.checkOutDate.trim();
+    }
+    return isIsoDate(initialFilter?.travelDate) ? addDaysISO(resolvedCheckIn, 1) : dayAfterTomorrowISO;
+  })();
+  const resolvedAdults = Number.isFinite(Number(initialFilter?.adults)) && Number(initialFilter.adults) >= 1
+    ? Number(initialFilter.adults)
+    : (Number.isFinite(Number(initialFilter?.guests)) && Number(initialFilter.guests) >= 1 ? Number(initialFilter.guests) : 2);
+  const resolvedChildren = Number.isFinite(Number(initialFilter?.children)) && Number(initialFilter.children) >= 0
+    ? Number(initialFilter.children)
+    : 0;
+  const resolvedRooms = Number.isFinite(Number(initialFilter?.rooms)) && Number(initialFilter.rooms) >= 1
+    ? Number(initialFilter.rooms)
+    : 1;
+  const resolvedTotalGuests = Math.max(1, resolvedAdults + resolvedChildren);
+  const resolvedTripType = (() => {
+    const sub = String(initialFilter?.subOption || '').toLowerCase();
+    if (sub.includes('round')) return 'Round-Trip';
+    if (initialFilter?.activeTab === 'transport' && isIsoDate(initialFilter?.checkOutDate)) return 'Round-Trip';
+    return 'One-Way';
+  })();
+  const resolvedMealTab = (() => {
+    const meal = String(initialFilter?.mealPlan || '').toLowerCase();
+    if (meal.includes('lunch')) return 'lunch';
+    if (meal.includes('dinner')) return 'dinner';
+    return 'breakfast';
+  })();
+
+  const [checkInDate, setCheckInDate] = useState(resolvedCheckIn);
+  const [checkOutDate, setCheckOutDate] = useState(resolvedCheckOut);
   const [isSelectingCheckOut, setIsSelectingCheckOut] = useState(false);
   const [hoverDate, setHoverDate] = useState(null);
-  const [adultCount, setAdultCount] = useState(2);
-  const [childrenCount, setChildrenCount] = useState(0);
+  const [adultCount, setAdultCount] = useState(resolvedAdults);
+  const [childrenCount, setChildrenCount] = useState(resolvedChildren);
   const guestCount = adultCount + childrenCount;
-  const [roomCount, setRoomCount] = useState(1);
-  const [seatCount, setSeatCount] = useState(1);
-  const [tripType, setTripType] = useState('One-Way');
-  const [routeFrom, setRouteFrom] = useState('');
-  const [routeTo, setRouteTo] = useState('');
+  const [roomCount, setRoomCount] = useState(resolvedRooms);
+  const [seatCount, setSeatCount] = useState(resolvedTotalGuests);
+  const [tripType, setTripType] = useState(resolvedTripType);
+  const [routeFrom, setRouteFrom] = useState(initialFilter?.pickup || '');
+  const [routeTo, setRouteTo] = useState(initialFilter?.dropoff || '');
 
   // Restaurant-specific booking states
-  const [restaurantGuests, setRestaurantGuests] = useState(2);
-  const [selectedRestaurantDates, setSelectedRestaurantDates] = useState(() => [tomorrowISO]);
+  const [restaurantGuests, setRestaurantGuests] = useState(resolvedTotalGuests);
+  const [selectedRestaurantDates, setSelectedRestaurantDates] = useState(() => [resolvedCheckIn]);
   const [isFoodMenuModalOpen, setIsFoodMenuModalOpen] = useState(false);
   const [isSelectedFoodsModalOpen, setIsSelectedFoodsModalOpen] = useState(false);
   const [showAllDaysInSummary, setShowAllDaysInSummary] = useState(false);
   const [previewFoodItem, setPreviewFoodItem] = useState(null);
-  const [activeMealTab, setActiveMealTab] = useState('breakfast'); // 'breakfast' | 'lunch' | 'dinner'
+  const [activeMealTab, setActiveMealTab] = useState(resolvedMealTab); // 'breakfast' | 'lunch' | 'dinner'
   const [activeFoodGuest, setActiveFoodGuest] = useState(1);
-  const [activeFoodDate, setActiveFoodDate] = useState(() => tomorrowISO);
+  const [activeFoodDate, setActiveFoodDate] = useState(() => resolvedCheckIn);
   const [selectedFoodByDateGuest, setSelectedFoodByDateGuest] = useState({});
   const [hasConfirmedFoodMenu, setHasConfirmedFoodMenu] = useState(false);
+
+  // Sync booking fields automatically when Hero filter or selected service changes
+  useEffect(() => {
+    if (!initialFilter) return;
+    const nextIn = isIsoDate(initialFilter.travelDate) ? initialFilter.travelDate.trim() : tomorrowISO;
+    const nextOut = isIsoDate(initialFilter.checkOutDate) && initialFilter.checkOutDate.trim() >= nextIn
+      ? initialFilter.checkOutDate.trim()
+      : (isIsoDate(initialFilter.travelDate) ? addDaysISO(nextIn, 1) : dayAfterTomorrowISO);
+    const nextAdults = Number.isFinite(Number(initialFilter.adults)) && Number(initialFilter.adults) >= 1
+      ? Number(initialFilter.adults)
+      : (Number.isFinite(Number(initialFilter.guests)) && Number(initialFilter.guests) >= 1 ? Number(initialFilter.guests) : 2);
+    const nextChildren = Number.isFinite(Number(initialFilter.children)) && Number(initialFilter.children) >= 0
+      ? Number(initialFilter.children)
+      : 0;
+    const nextRooms = Number.isFinite(Number(initialFilter.rooms)) && Number(initialFilter.rooms) >= 1
+      ? Number(initialFilter.rooms)
+      : 1;
+    const nextGuestsTotal = Math.max(1, nextAdults + nextChildren);
+
+    setCheckInDate(nextIn);
+    setCheckOutDate(nextOut);
+    setAdultCount(nextAdults);
+    setChildrenCount(nextChildren);
+    setRoomCount(nextRooms);
+    setSeatCount(nextGuestsTotal);
+    setRestaurantGuests(nextGuestsTotal);
+    setSelectedRestaurantDates([nextIn]);
+    setActiveFoodDate(nextIn);
+    if (initialFilter.pickup) setRouteFrom(initialFilter.pickup);
+    if (initialFilter.dropoff) setRouteTo(initialFilter.dropoff);
+
+    const sub = String(initialFilter.subOption || '').toLowerCase();
+    if (sub.includes('round') || (initialFilter.activeTab === 'transport' && isIsoDate(initialFilter.checkOutDate))) {
+      setTripType('Round-Trip');
+    } else if (sub.includes('one')) {
+      setTripType('One-Way');
+    }
+
+    const meal = String(initialFilter.mealPlan || '').toLowerCase();
+    if (meal.includes('lunch')) setActiveMealTab('lunch');
+    else if (meal.includes('dinner')) setActiveMealTab('dinner');
+    else if (meal.includes('breakfast')) setActiveMealTab('breakfast');
+  }, [initialHotel?.id, initialFilter, tomorrowISO, dayAfterTomorrowISO]);
 
   useEffect(() => {
     if (activeFoodGuest > restaurantGuests) {
@@ -372,15 +467,15 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     );
     const mealFallbacks = {
       breakfast: {
-        items: ['বুফে ব্রেকফাস্ট প্ল্যাটার', 'পরাটা ও ভুনা খিচুড়ি', 'কফি ও ফ্রেশ জুস'],
+        items: ['Buffet Breakfast Platter', 'Paratha & Bhuna Khichuri', 'Coffee & Fresh Juice'],
         photo: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=600&q=80'
       },
       lunch: {
-        items: ['স্পেশাল কাচ্চি / পোলাও', 'গ্রিলড চিকেন ও নান', 'ফ্রেশ সালাদ ও ড্রিঙ্কস'],
+        items: ['Special Kacchi / Polao', 'Grilled Chicken & Naan', 'Fresh Salad & Drinks'],
         photo: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
       },
       dinner: {
-        items: ['লাইভ বারবিকিউ প্ল্যাটার', 'তান্দুরি চিকেন ও নান', 'স্পেশাল ডেজার্ট'],
+        items: ['Live BBQ Platter', 'Tandoori Chicken & Naan', 'Special Dessert'],
         photo: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80'
       }
     };
@@ -392,7 +487,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           return {
             key: `${mealKey}-${idx}`,
             meal: mealKey,
-            name: entry.name || entry.title || `মেনু আইটেম ${idx + 1}`,
+            name: entry.name || entry.title || `Menu Item ${idx + 1}`,
             price: Number(entry.price) > 0 ? Number(entry.price) : defaultItemPrice,
             photo: entry.photo || entry.image || hotel.photo || mealFallbacks[mealKey].photo
           };
@@ -404,7 +499,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
         return {
           key: `${mealKey}-${idx}`,
           meal: mealKey,
-          name: cleanName || `মেনু আইটেম ${idx + 1}`,
+          name: cleanName || `Menu Item ${idx + 1}`,
           price: parsedPrice > 0 ? parsedPrice : defaultItemPrice,
           photo: hotel.photo || hotel.defaultPhoto || mealFallbacks[mealKey].photo
         };
@@ -594,9 +689,17 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
 
   // Calendar View Month Navigation (Default to Check-in Month)
   const [calendarViewDate, setCalendarViewDate] = useState(() => {
-    const parts = tomorrowISO.split('-').map(Number);
+    const parts = resolvedCheckIn.split('-').map(Number);
     return new Date(parts[0], parts[1] - 1, 1);
   });
+
+  useEffect(() => {
+    if (!initialFilter?.travelDate || !isIsoDate(initialFilter.travelDate)) return;
+    const parts = initialFilter.travelDate.trim().split('-').map(Number);
+    if (parts.length === 3) {
+      setCalendarViewDate(new Date(parts[0], parts[1] - 1, 1));
+    }
+  }, [initialFilter?.travelDate]);
 
   // Dynamic Day, Price & VAT/Tax Calculations
   const matchedRouteFare = useMemo(() => {
@@ -679,9 +782,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       let isEnd = false;
       let isInRange = false;
 
-      if (isRestaurant) {
-        isStart = selectedRestaurantDates.includes(dateStr);
-      } else if (isSelectingCheckOut && checkInDate) {
+      if (isSelectingCheckOut && checkInDate) {
         if (hoverDate) {
           const minDate = hoverDate < checkInDate ? hoverDate : checkInDate;
           const maxDate = hoverDate > checkInDate ? hoverDate : checkInDate;
@@ -713,45 +814,59 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     return daysArray;
   }, [isRestaurant, selectedRestaurantDates, calendarViewDate, checkInDate, checkOutDate, isSelectingCheckOut, hoverDate]);
 
-  // Calendar click handler for 2 dates range selection (or multi-day toggle for Restaurant)
+  // Helper to build a consecutive serial of ISO date strings from start..end inclusive
+  const buildSerialDates = (startStr, endStr) => {
+    if (!startStr) return [];
+    const end = endStr && endStr >= startStr ? endStr : startStr;
+    const dates = [];
+    let cur = startStr;
+    let guard = 0;
+    while (cur <= end && guard < 90) {
+      dates.push(cur);
+      cur = addDaysISO(cur, 1);
+      guard += 1;
+    }
+    return dates;
+  };
+
+  // Calendar click handler: consecutive serial multi-date selection (2+ or more days in a serial) for all services
   const handleCalendarDayClick = (dayObj) => {
     if (!dayObj) return;
     const clickedStr = dayObj.dateStr;
 
-    if (isRestaurant) {
-      setSelectedRestaurantDates((prev) =>
-        prev.includes(clickedStr)
-          ? prev.filter((d) => d !== clickedStr)
-          : [...prev, clickedStr].sort()
-      );
-      return;
-    }
+    const applyRange = (startStr, endStr) => {
+      setCheckInDate(startStr);
+      setCheckOutDate(endStr);
+      setIsSelectingCheckOut(false);
+      setHoverDate(null);
+      if (isRestaurant) {
+        setSelectedRestaurantDates(buildSerialDates(startStr, endStr));
+      }
+    };
 
     if (isSelectingCheckOut && checkInDate) {
-      // Second click:
       if (clickedStr > checkInDate) {
-        // Normal order: 1 to 5, 5 to 10, 20 to 25, etc.
-        setCheckOutDate(clickedStr);
-        setIsSelectingCheckOut(false);
-        setHoverDate(null);
+        applyRange(checkInDate, clickedStr);
       } else if (clickedStr < checkInDate) {
-        // Reverse order (e.g. clicked 25 then 20): earlier date becomes check-in, original becomes check-out!
-        setCheckInDate(clickedStr);
-        setCheckOutDate(checkInDate);
-        setIsSelectingCheckOut(false);
-        setHoverDate(null);
+        applyRange(clickedStr, checkInDate);
       } else {
-        // Clicked the exact same date: set checkout as +1 day (1 night stay)
-        setCheckOutDate(addDaysISO(clickedStr, 1));
-        setIsSelectingCheckOut(false);
-        setHoverDate(null);
+        applyRange(clickedStr, addDaysISO(clickedStr, 1));
       }
+    } else if (checkInDate && checkOutDate && clickedStr === addDaysISO(checkOutDate, 1)) {
+      // Extend consecutive serial forward by 1 day
+      applyRange(checkInDate, clickedStr);
+    } else if (checkInDate && checkOutDate && clickedStr === addDaysISO(checkInDate, -1)) {
+      // Extend consecutive serial backward by 1 day
+      applyRange(clickedStr, checkOutDate);
     } else {
-      // First click: Starts new range selection
+      // First click: Starts new consecutive serial range selection
       setCheckInDate(clickedStr);
       setCheckOutDate(null);
       setIsSelectingCheckOut(true);
       setHoverDate(null);
+      if (isRestaurant) {
+        setSelectedRestaurantDates([clickedStr]);
+      }
     }
   };
 
@@ -768,20 +883,20 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     setPromoError('');
     const code = (promoCode || '').trim().toUpperCase();
     if (!code) {
-      setPromoError('দয়া করে একটি প্রোমো কোড লিখুন');
+      setPromoError('Please enter a promo code');
       return;
     }
     if (code === 'DISCOUNT10' || code === 'SAVE10') {
       const discount = Math.round(baseRentPrice * 0.1);
-      setAppliedPromo({ code, discount, label: '১০% ছাড় প্রযোজ্য হয়েছে!' });
+      setAppliedPromo({ code, discount, label: '10% discount applied!' });
     } else if (code === 'WELCOME500' || code === 'PROMO500') {
       const discount = Math.min(500, baseRentPrice);
-      setAppliedPromo({ code, discount, label: '৳৫০০ বিশেষ ছাড় প্রযোজ্য হয়েছে!' });
+      setAppliedPromo({ code, discount, label: 'BDT 500 special discount applied!' });
     } else if (code === 'AETHERIA20') {
       const discount = Math.round(baseRentPrice * 0.2);
-      setAppliedPromo({ code, discount, label: '২০% ভিআইপি ছাড় প্রযোজ্য হয়েছে!' });
+      setAppliedPromo({ code, discount, label: '20% VIP discount applied!' });
     } else {
-      setPromoError('অকার্যকর প্রোমো কোড। অনুগ্রহ করে সঠিক কোড দিন (যেমন: DISCOUNT10, SAVE10)');
+      setPromoError('Invalid promo code. Please enter a valid code (e.g. DISCOUNT10, SAVE10)');
     }
   };
 
@@ -797,15 +912,15 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
     setFormError('');
 
     if (!customerName.trim()) {
-      setFormError('অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন');
+      setFormError('Please enter your full name');
       return;
     }
     if (!customerPhone.trim()) {
-      setFormError('অনুগ্রহ করে আপনার সচল ফোন নম্বর লিখুন');
+      setFormError('Please enter an active phone number');
       return;
     }
     if (!customerWhatsApp.trim()) {
-      setFormError('অনুগ্রহ করে আপনার হোয়াটসঅ্যাপ নম্বর দিন');
+      setFormError('Please enter your WhatsApp number');
       return;
     }
 
@@ -835,9 +950,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
         routeTo: isTransport ? routeTo.trim() : undefined,
         selectedFoods: isRestaurant && selectedFoodList.length > 0 ? selectedFoodList : undefined,
         specialNotes: isTransport
-          ? `ট্রিপ: ${tripType} | সিট: ${seatCount} টি${routeFrom.trim() || routeTo.trim() ? ` | রুট: ${routeFrom.trim() || 'নির্ধারিত নয়'} → ${routeTo.trim() || 'নির্ধারিত নয়'}` : ''}`
+          ? `Trip: ${tripType} | Seats: ${seatCount}${routeFrom.trim() || routeTo.trim() ? ` | Route: ${routeFrom.trim() || 'Not specified'} → ${routeTo.trim() || 'Not specified'}` : ''}`
           : isRestaurant
-            ? `গেস্ট: ${restaurantGuests} জন | তারিখ (${selectedRestaurantDates.length} দিন): ${selectedRestaurantDates.join(', ')}${selectedFoodList.length > 0 ? ` | খাবার: ${selectedFoodList.map((f) => `${f.dateStr} (Guest ${f.guestIndex}): ${f.name} x${f.qty}`).join(', ')}` : ''}`
+            ? `Guests: ${restaurantGuests} | Dates (${selectedRestaurantDates.length} days): ${selectedRestaurantDates.join(', ')}${selectedFoodList.length > 0 ? ` | Food: ${selectedFoodList.map((f) => `${f.dateStr} (Guest ${f.guestIndex}): ${f.name} x${f.qty}`).join(', ')}` : ''}`
             : `Adults: ${adultCount}, Children: ${childrenCount}`,
         perDayPrice,
         basePrice: baseRentPrice,
@@ -862,7 +977,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       if (onBookingSuccess) onBookingSuccess(bookingData);
     } catch (err) {
       console.error('Hotel booking error:', err);
-      setFormError('বুকিং সম্পন্ন করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      setFormError('There was an issue completing the booking. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -870,11 +985,11 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
 
   // Direct WhatsApp contact link
   const whatsAppMessage = encodeURIComponent(
-    `হ্যালো! আমি ${hotel.name}-এ রুম বুকিং সম্পর্কে জানতে আগ্রহী।\n` +
-    `গন্তব্য: ${hotel.location || hotel.destinationId || 'বাংলাদেশ'}\n` +
-    `তারিখ: ${toDisplayDate(checkInDate)} থেকে ${toDisplayDate(checkOutDate)} (${calculatedDays} দিন)\n` +
-    `প্রতিদিনের ভাড়া: ৳${perDayPrice}\n` +
-    `মোট প্রদেয় মূল্য: ৳${grandTotal}`
+    `Hello! I am interested in booking a room at ${hotel.name}.\n` +
+    `Destination: ${hotel.location || hotel.destinationId || 'Bangladesh'}\n` +
+    `Dates: ${toDisplayDate(checkInDate)} to ${toDisplayDate(checkOutDate)} (${calculatedDays} days)\n` +
+    `Daily Rate: BDT ${perDayPrice}\n` +
+    `Total Payable: BDT ${grandTotal}`
   );
   const whatsAppDirectUrl = rawWa ? `https://wa.me/${rawWa}?text=${whatsAppMessage}` : '';
 
@@ -890,7 +1005,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-300/80 dark:border-white/10 hover:border-[#69EBDA] text-slate-800 dark:text-slate-100 font-bold shadow-sm hover:shadow-md transition-all duration-200 w-fit cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-teal-600 dark:text-[#69EBDA]" />
-          <span>পেছনে ফিরে যান (Back)</span>
+          <span>Go Back</span>
         </button>
 
         <div className="flex items-center gap-2 sm:gap-3">
@@ -910,10 +1025,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 ? 'bg-rose-500 border-rose-400 text-white shadow-rose-500/30'
                 : 'bg-white/90 dark:bg-slate-800/90 border-slate-300/80 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:text-rose-500'
             }`}
-            title={isFav ? 'উইশলিস্ট থেকে সরান' : 'উইশলিস্টে যুক্ত করুন'}
+            title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
           >
             <Heart className={`w-4 h-4 transition-transform ${isFav ? 'fill-white scale-110' : ''}`} />
-            <span className="hidden sm:inline">{isFav ? 'সংরক্ষিত' : 'উইশলিস্ট'}</span>
+            <span className="hidden sm:inline">{isFav ? 'Saved' : 'Wishlist'}</span>
           </button>
         </div>
       </div>
@@ -959,9 +1074,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           <div className="lg:col-span-1 flex flex-col">
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                ফটো ও ভিডিও গ্যালারি ({galleryPhotos.length + (youtubeThumb ? 1 : 0)})
+                Photo & Video Gallery ({galleryPhotos.length + (youtubeThumb ? 1 : 0)})
               </span>
-              <span className="text-[11px] text-teal-600 dark:text-[#69EBDA] font-semibold">ক্লিক করে দেখুন</span>
+              <span className="text-[11px] text-teal-600 dark:text-[#69EBDA] font-semibold">Click to view</span>
             </div>
 
             {/* Scrollable Gallery Container */}
@@ -971,7 +1086,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <div
                   onClick={() => window.open(toYouTubeWatchUrl(hotel.youtubeLink), '_blank', 'noopener,noreferrer')}
                   className="relative h-24 sm:h-28 rounded-2xl overflow-hidden cursor-pointer border-2 border-red-500/70 hover:border-red-500 shadow-md group transition-all duration-200"
-                  title="ইউটিউব ভিডিও দেখুন"
+                  title="Watch YouTube Video"
                 >
                   <img
                     src={youtubeThumb || defaultPhotoUrl}
@@ -984,7 +1099,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     </div>
                   </div>
                   <div className="absolute bottom-2 left-2 right-2 bg-black/75 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center justify-between text-white text-[11px] font-bold">
-                    <span className="truncate">ভিডিও প্রিভিউ</span>
+                    <span className="truncate">Video Preview</span>
                     <ExternalLink className="w-3 h-3 text-red-400 shrink-0" />
                   </div>
                 </div>
@@ -1046,13 +1161,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 className="mb-2 px-3.5 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-[#69EBDA] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>হোটেল ডিটেইলস ভিউতে ফিরুন</span>
+                <span>Back to Hotel Details</span>
               </button>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                সকল কাস্টমার রিভিউ ও কমিউনিটি মতামত
+                All Customer Reviews & Community Opinions
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {hotel.name} • সর্বমোট {ratingMeta.totalReviews} টি রিভিউ ও রেটিং
+                {hotel.name} • Total {ratingMeta.totalReviews} Reviews & Ratings
               </p>
             </div>
 
@@ -1060,7 +1175,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               {/* Direct Card Rating Widget */}
               <div className="px-3.5 py-2 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200/80 dark:border-white/10 flex items-center gap-2">
                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  আপনার রেটিং দিন:
+                  Your Rating:
                 </span>
                 <div
                   className="flex items-center gap-0.5 text-amber-400"
@@ -1077,7 +1192,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={() => handleDetailCardRating(s)}
                         onMouseEnter={() => setDetailHoverStar(s)}
                         className="p-0.5 hover:scale-125 transition-transform cursor-pointer"
-                        title={`${s} স্টার রেটিং দিন`}
+                        title={`Rate ${s} stars`}
                       >
                         <Star
                           className={`w-4 h-4 ${
@@ -1095,7 +1210,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <span className="text-base font-black text-amber-500 font-mono">
                   {ratingMeta.averageRating.toFixed(1)}
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">/ ৫</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">/ 5</span>
               </div>
 
               <button
@@ -1104,7 +1219,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 className="px-4 py-2 rounded-2xl bg-gradient-to-r from-teal-500 to-[#69EBDA] hover:from-teal-400 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
               >
                 <MessageSquarePlus className="w-4 h-4" />
-                <span>কমেন্ট লিখুন</span>
+                <span>Write a Comment</span>
               </button>
             </div>
           </div>
@@ -1131,13 +1246,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           {hotelReviews.length === 0 ? (
             <div className="text-center py-12 px-4 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-white/10">
               <MessageSquare className="w-10 h-10 mx-auto text-slate-400 mb-3 opacity-50" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">এখনো কোনো কাস্টমার রিভিউ পাওয়া যায়নি।</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No customer reviews found yet.</p>
               <button
                 type="button"
                 onClick={() => handleOpenReviewModal()}
                 className="mt-3 px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-teal-500 to-cyan-500 shadow-md hover:shadow-teal-500/25 transition-all cursor-pointer"
               >
-                প্রথম রিভিউটি আপনিই দিন
+                Be the first to review
               </button>
             </div>
           ) : (
@@ -1168,7 +1283,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                             </span>
                             {isMyReview && (
                               <span className="px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-700 dark:text-[#69EBDA] text-[10px] font-black">
-                                আপনার রিভিউ
+                                Your Review
                               </span>
                             )}
                           </div>
@@ -1186,7 +1301,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                               ))}
                             </div>
                             <span className="text-xs text-slate-400">
-                              {rev.date || 'সম্প্রতি'}
+                              {rev.date || 'Recently'}
                             </span>
                           </div>
                         </div>
@@ -1220,7 +1335,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold cursor-pointer"
                                 >
                                   <Edit2 className="w-3.5 h-3.5 text-teal-500" />
-                                  <span>এডিট করুন</span>
+                                  <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
@@ -1228,7 +1343,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/15 font-semibold cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                  <span>মুছে ফেলুন</span>
+                                  <span>Delete</span>
                                 </button>
                               </motion.div>
                             )}
@@ -1255,11 +1370,11 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                       }`}
                     >
                       <Heart className={`w-4 h-4 ${isLiked ? 'fill-current scale-110' : ''}`} />
-                      <span>{rev.likes || 0} টি লাইক</span>
+                      <span>{rev.likes || 0} Likes</span>
                     </button>
 
                     <span className="text-xs text-slate-400">
-                      {isLiked ? '✓ আপনি পছন্দ করেছেন' : '১ জন ১টি লাইক দিতে পারেন'}
+                      {isLiked ? '✓ You liked this' : '1 like per person'}
                     </span>
                   </div>
                 </div>
@@ -1277,14 +1392,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-teal-600 dark:text-[#69EBDA]" />
-                সুবিধাসমূহ ও বৈশিষ্ট্য (Short Info)
+                Amenities & Highlights
               </h2>
               {shortInfoList.length > 4 && (
                 <button
                   onClick={() => setIsMoreShortInfoOpen(true)}
                   className="text-xs font-bold text-teal-700 dark:text-[#69EBDA] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>আরও দেখুন ({shortInfoList.length})</span>
+                  <span>View more ({shortInfoList.length})</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -1318,7 +1433,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               </div>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                এই হোটেলের জন্য পর্যাপ্ত সুবিধার তালিকা শীঘ্রই যোগ করা হবে।
+                Comprehensive amenities list will be added soon.
               </p>
             )}
 
@@ -1328,7 +1443,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 onClick={() => setIsMoreShortInfoOpen(true)}
                 className="mt-4 w-full py-2.5 rounded-2xl bg-teal-500/10 dark:bg-[#69EBDA]/15 hover:bg-teal-500/20 text-teal-800 dark:text-[#69EBDA] font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-teal-500/20 cursor-pointer"
               >
-                <span>সবগুলো ({shortInfoList.length}টি) সুবিধা দেখতে ক্লিক করুন</span>
+                <span>Click to view all ({shortInfoList.length}) amenities</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -1342,18 +1457,18 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] flex items-center gap-1.5 mb-1">
                 <Tag className="w-3.5 h-3.5" />
-                Daily Booking Fare (প্রতিদিনের বুকিং ভাড়া)
+                Daily Booking Fare
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-                  ৳ {perDayPrice.toLocaleString('en-IN')}
+                  BDT {perDayPrice.toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400">
-                  / {hotel.bookingDays || 'প্রতি দিন'}
+                  / {hotel.bookingDays || 'Per Day'}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                ভ্যাট ও ট্যাক্স পরবর্তীতে প্রযোজ্য হবে • কোনো গোপন চার্জ নেই
+                VAT & taxes applied subsequently • No hidden charges
               </p>
             </div>
 
@@ -1362,7 +1477,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="flex flex-col gap-2 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-teal-500/20 dark:border-white/10 w-full sm:w-auto sm:min-w-[260px]">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-[#69EBDA] flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" />
-                  রুট ও সিট ভাড়া (Route & Seat Fares)
+                  Route & Seat Fares
                 </span>
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {hotel.routeFares.map((rf, idx) => (
@@ -1375,13 +1490,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         if (rf.seats) setSeatCount(Number(rf.seats) || 1);
                       }}
                       className="w-full text-left flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-teal-500/20 transition-all cursor-pointer text-xs"
-                      title="ক্লিক করে রুট ও সিট সিলেক্ট করুন"
+                      title="Click to select route and seat"
                     >
                       <span className="font-bold text-slate-800 dark:text-slate-100 truncate">
                         {rf.from || 'From'} → {rf.to || 'To'}
                       </span>
                       <span className="font-extrabold text-teal-700 dark:text-[#69EBDA] shrink-0">
-                        {rf.seats ? `${rf.seats} সিট • ` : ''}৳ {Number(rf.price || 0).toLocaleString('en-IN')}
+                        {rf.seats ? `${rf.seats} Seats • ` : ''}BDT {Number(rf.price || 0).toLocaleString('en-IN')}
                       </span>
                     </button>
                   ))}
@@ -1391,16 +1506,16 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="flex flex-col sm:items-end gap-2 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-teal-500/20 dark:border-white/10 w-full sm:w-auto">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-[#69EBDA] flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  সময়সূচি (Hotel Timings)
+                  Hotel Timings
                 </span>
                 <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex sm:flex-col gap-3 sm:gap-1">
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Check-in: </span>
-                    <span className="font-bold text-slate-900 dark:text-white">{hotel.checkInTime || '14:00 (দুপুর ২:০০)'}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{hotel.checkInTime || '14:00 (2:00 PM)'}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Check-out: </span>
-                    <span className="font-bold text-slate-900 dark:text-white">{hotel.checkOutTime || '12:00 (দুপুর ১২:০০)'}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{hotel.checkOutTime || '12:00 (12:00 PM)'}</span>
                   </div>
                 </div>
               </div>
@@ -1410,12 +1525,12 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           {/* Section C: Hotel Details (4 to 5 lines + See More) */}
           <div className="bg-white/95 dark:bg-slate-900/90 rounded-3xl p-5 sm:p-7 border border-slate-300/80 dark:border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
             <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white mb-3">
-              হোটেলের বিস্তারিত বিবরণ
+              Hotel Details & Overview
             </h2>
 
             <div className="relative">
               <p className="text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed line-clamp-5 whitespace-pre-line">
-                {hotel.details || hotel.description || hotel.shortDescription || 'হোটেলের বিস্তারিত বিবরণ খুব শীঘ্রই প্রকাশিত হচ্ছে।'}
+                {hotel.details || hotel.description || hotel.shortDescription || 'Detailed hotel overview will be published soon.'}
               </p>
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none" />
             </div>
@@ -1427,7 +1542,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 onClick={() => setIsFullDetailsOpen(true)}
                 className="w-full py-3 px-5 rounded-2xl bg-teal-500/10 dark:bg-[#69EBDA]/15 hover:bg-teal-500/20 border border-teal-500/30 text-teal-900 dark:text-[#69EBDA] font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all cursor-pointer group"
               >
-                <span>Read the full description (সম্পূর্ণ বিবরণ পড়ুন)</span>
+                <span>Read Full Description</span>
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -1437,16 +1552,16 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
           <div className="bg-white/95 dark:bg-slate-900/90 rounded-3xl p-5 sm:p-7 border border-slate-300/80 dark:border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
             <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-teal-600 dark:text-[#69EBDA]" />
-              হোটেলের অবস্থান ও লাইভ ম্যাপ
+              Hotel Location & Live Map
             </h2>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div>
                 <p className="text-base font-bold text-slate-900 dark:text-white">
-                  {hotel.location || hotel.destinationId || 'মূল পর্যটন কেন্দ্র, বাংলাদেশ'}
+                  {hotel.location || hotel.destinationId || 'Prime Tourist Zone, Bangladesh'}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  গন্তব্য এলাকা: {hotel.destinationId || hotel.location || 'জনপ্রিয় পর্যটন স্পট'}
+                  Destination Area: {hotel.destinationId || hotel.location || 'Popular Tourist Spot'}
                 </p>
               </div>
 
@@ -1459,7 +1574,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-md transition-all shrink-0"
                 >
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>গুগল ম্যাপে লাইভ ডিরেকশন</span>
+                  <span>Live Directions on Google Maps</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               ) : (
@@ -1470,7 +1585,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-white font-bold text-xs transition-all shrink-0"
                 >
                   <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-[#69EBDA]" />
-                  <span>গুগল ম্যাপে খুঁজুন</span>
+                  <span>Search on Google Maps</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               )}
@@ -1501,16 +1616,16 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-[#69EBDA]">
-                  রুম বুকিং ক্যালেন্ডার
+                  Room Booking Calendar
                 </span>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                  তারিখ নির্বাচন করুন
+                  Select Dates
                 </h3>
               </div>
               <div className="text-right">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">প্রতিদিন</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Per Day</span>
                 <p className="text-base sm:text-lg font-bold text-teal-700 dark:text-[#69EBDA]">
-                  ৳{perDayPrice.toLocaleString('en-IN')}
+                  BDT {perDayPrice.toLocaleString('en-IN')}
                 </p>
               </div>
             </div>
@@ -1520,10 +1635,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="mb-5 p-3.5 rounded-2xl bg-teal-50/80 dark:bg-slate-800/80 border border-teal-200/80 dark:border-teal-500/25 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 dark:text-[#69EBDA]">
-                    নির্বাচিত দিন ({selectedRestaurantDates.length} দিন)
+                    Selected Days ({selectedRestaurantDates.length} days)
                   </span>
                   <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                    তারিখে ক্লিক করে সিলেক্ট / আনসিলেক্ট করুন
+                    Click dates to select / unselect
                   </span>
                 </div>
                 {selectedRestaurantDates.length > 0 ? (
@@ -1536,7 +1651,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                           setSelectedRestaurantDates((prev) => prev.filter((item) => item !== d))
                         }
                         className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-teal-300 dark:border-[#69EBDA]/40 text-[11px] font-bold text-slate-800 dark:text-white flex items-center gap-1 cursor-pointer hover:border-rose-400"
-                        title="আনসিলেক্ট করতে ক্লিক করুন"
+                        title="Click to unselect"
                       >
                         <span>{toDisplayDate(d)}</span>
                         <X className="w-3 h-3 text-rose-500" />
@@ -1545,7 +1660,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   </div>
                 ) : (
                   <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                    ক্যালেন্ডার থেকে কমপক্ষে ১টি দিন সিলেক্ট করুন
+                    Please select at least 1 day from the calendar
                   </p>
                 )}
               </div>
@@ -1572,7 +1687,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     </span>
                   ) : (
                     <span className="text-teal-600 dark:text-[#69EBDA] animate-pulse text-xs sm:text-sm font-semibold">
-                      তারিখ নির্বাচন করুন...
+                      Select date...
                     </span>
                   )}
                 </span>
@@ -1585,14 +1700,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               {/* Calendar Month & Navigation */}
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-black text-slate-900 dark:text-white">
-                  {MONTH_NAMES[calendarViewDate.getMonth()]} {calendarViewDate.getFullYear()} ({MONTH_NAMES_BN[calendarViewDate.getMonth()]})
+                  {MONTH_NAMES[calendarViewDate.getMonth()]} {calendarViewDate.getFullYear()}
                 </span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={handlePrevMonth}
                     className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 cursor-pointer"
-                    title="আগের মাস"
+                    title="Previous Month"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1600,7 +1715,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     type="button"
                     onClick={handleNextMonth}
                     className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 cursor-pointer"
-                    title="পরের মাস"
+                    title="Next Month"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1609,13 +1724,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
 
               {/* Day of Week Headers */}
               <div className="grid grid-cols-7 gap-1 text-center mb-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                <span>রবি</span>
-                <span>সোম</span>
-                <span>মঙ্গল</span>
-                <span>বুধ</span>
-                <span>বৃহ</span>
-                <span>শুক্র</span>
-                <span>শনি</span>
+                <span>Su</span>
+                <span>Mo</span>
+                <span>Tu</span>
+                <span>We</span>
+                <span>Th</span>
+                <span>Fr</span>
+                <span>Sa</span>
               </div>
 
               {/* 30 Days Calendar Grid */}
@@ -1657,13 +1772,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <span>
                   {isSelectingCheckOut ? (
                     <span className="text-teal-700 dark:text-[#69EBDA] font-bold animate-pulse">
-                      * চেক-আউটের জন্য শেষ তারিখে ক্লিক করুন (যেমন: ৫, ১০, ২২ বা ২৫)
+                      * Click ending date for check-out (e.g. 5, 10, 22, or 25)
                     </span>
                   ) : (
-                    <span>* শুরুর ও শেষের তারিখে ক্লিক করে সহজে দিন নির্বাচন করুন</span>
+                    <span>* Click start and end dates to select your stay</span>
                   )}
                 </span>
-                <span className="font-bold text-teal-700 dark:text-[#69EBDA]">{calculatedDays} দিন নির্বাচিত</span>
+                <span className="font-bold text-teal-700 dark:text-[#69EBDA]">{calculatedDays} Days Selected</span>
               </div>
             </div>
 
@@ -1672,7 +1787,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="space-y-3 mb-5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                    ট্রিপের ধরন (Trip Type)
+                    Trip Type
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {['One-Way', 'Round-Trip'].map((type) => {
@@ -1696,7 +1811,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    সিট সংখ্যা (Seat Count)
+                    Seat Count
                   </label>
                   <select
                     value={seatCount}
@@ -1704,7 +1819,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none"
                   >
                     {adminSeatOptions.map((n) => (
-                      <option key={n} value={n}>{n} টি সিট</option>
+                      <option key={n} value={n}>{n} Seats</option>
                     ))}
                   </select>
                 </div>
@@ -1712,7 +1827,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      From (যেখান থেকে যাবেন)
+                      From (Departure Location)
                     </label>
                     {adminFromOptions.length > 0 ? (
                       <select
@@ -1736,14 +1851,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         type="text"
                         value={routeFrom}
                         onChange={(e) => setRouteFrom(e.target.value)}
-                        placeholder="যেমন: ঢাকা"
+                        placeholder="e.g. Dhaka"
                         className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-[#69EBDA]"
                       />
                     )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      To (যেখানে যাবেন)
+                      To (Destination Location)
                     </label>
                     {adminToOptions.length > 0 ? (
                       <select
@@ -1760,7 +1875,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         type="text"
                         value={routeTo}
                         onChange={(e) => setRouteTo(e.target.value)}
-                        placeholder="যেমন: কক্সবাজার"
+                        placeholder="e.g. Cox's Bazar"
                         className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-[#69EBDA]"
                       />
                     )}
@@ -1770,12 +1885,12 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
             ) : isRestaurant ? (
               <div className="mb-5 space-y-2.5">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  অতিথি সংখ্যা (Guest: {restaurantGuests} জন)
+                  Number of Guests ({restaurantGuests} Guests)
                 </label>
                 <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold text-slate-900 dark:text-white">Guest</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">কতজন গেস্ট খাবার খাবে</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Total dining guests</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1807,7 +1922,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                       onClick={() => setIsFoodMenuModalOpen(true)}
                       className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 font-extrabold text-xs shadow-sm cursor-pointer transition-all"
                     >
-                      খাবারের মেনু
+                      Food Menu
                     </button>
                     {hasConfirmedFoodMenu && selectedFoodList.length > 0 && (
                       <button
@@ -1815,7 +1930,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={() => setIsSelectedFoodsModalOpen(true)}
                         className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white/15 hover:bg-slate-800 text-[#69EBDA] border border-[#69EBDA]/40 font-extrabold text-xs shadow-sm cursor-pointer transition-all"
                       >
-                        সিলেক্ট করা খাবার ({totalSelectedFoodQty})
+                        Selected Items ({totalSelectedFoodQty})
                       </button>
                     )}
                   </div>
@@ -1825,7 +1940,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="space-y-3 mb-5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    রুম সংখ্যা
+                    Number of Rooms
                   </label>
                   <select
                     value={roomCount}
@@ -1833,14 +1948,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none"
                   >
                     {[1, 2, 3, 4, 5].map(n => (
-                      <option key={n} value={n}>{n} টি রুম</option>
+                      <option key={n} value={n}>{n} Rooms</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                    অতিথি (Adults ও Children • মোট: {guestCount} জন)
+                    Guests (Adults & Children • Total: {guestCount})
                   </label>
                   <div className="grid grid-cols-2 gap-2.5">
                     {/* Adults */}
@@ -1908,27 +2023,27 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>
                   {isTransport
-                    ? `গাড়ি ভাড়া (${calculatedDays} দিন × ৳${perDayPrice.toLocaleString('en-IN')} • ${seatCount} সিট)`
+                    ? `Transport Fare (${calculatedDays} days × BDT ${perDayPrice.toLocaleString('en-IN')} • ${seatCount} seats)`
                     : isRestaurant
                       ? selectedFoodList.length > 0
-                        ? `নির্বাচিত খাবার (${totalSelectedFoodQty} টি আইটেম × ${calculatedDays} দিন)`
-                        : `ডাইনিং চার্জ (${calculatedDays} দিন × ${restaurantGuests} জন × ৳${perDayPrice.toLocaleString('en-IN')})`
-                      : `রুম ভাড়া (${calculatedDays} দিন × ${roomCount} রুম × ৳${perDayPrice.toLocaleString('en-IN')})`}
+                        ? `Selected Food (${totalSelectedFoodQty} items × ${calculatedDays} days)`
+                        : `Dining Charge (${calculatedDays} days × ${restaurantGuests} guests × BDT ${perDayPrice.toLocaleString('en-IN')})`
+                      : `Room Fare (${calculatedDays} days × ${roomCount} rooms × BDT ${perDayPrice.toLocaleString('en-IN')})`}
                 </span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
-                  ৳ {baseRentPrice.toLocaleString('en-IN')}
+                  BDT {baseRentPrice.toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                <span>ভ্যাট ও সার্ভিস চার্জ ({vatTaxPercentage}%)</span>
+                <span>VAT & Service Charge ({vatTaxPercentage}%)</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
-                  + ৳ {vatTaxAmount.toLocaleString('en-IN')}
+                  + BDT {vatTaxAmount.toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="pt-2.5 border-t border-teal-200 dark:border-white/10 flex items-center justify-between">
                 <div>
                   <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-teal-800 dark:text-[#69EBDA] block">
-                    Total Price (সর্বমোট মূল্য)
+                    Total Price
                   </span>
                   <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                     {isTransport
@@ -1939,7 +2054,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   </span>
                 </div>
                 <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-                  ৳ {grandTotal.toLocaleString('en-IN')}
+                  BDT {grandTotal.toLocaleString('en-IN')}
                 </span>
               </div>
             </motion.div>
@@ -1957,7 +2072,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               }}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-600 via-[#69EBDA] to-teal-500 hover:from-teal-500 hover:to-[#69EBDA] text-slate-950 font-black text-base shadow-[0_10px_25px_rgba(105,235,218,0.4)] hover:shadow-[0_12px_30px_rgba(105,235,218,0.6)] transition-all duration-300 flex items-center justify-center gap-2 group mb-3 cursor-pointer"
             >
-              <span>Booking Now (বুকিং করুন)</span>
+              <span>Book Now</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
@@ -1971,7 +2086,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   className="w-full py-3 rounded-2xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] dark:text-[#25D366] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
                 >
                   <MessageCircle className="w-4 h-4 fill-current shrink-0" />
-                  <span>সরাসরি হোয়াটসঅ্যাপে কথা বলুন</span>
+                  <span>Chat Directly on WhatsApp</span>
                 </a>
               )}
 
@@ -1981,7 +2096,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
                 >
                   <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-[#69EBDA] shrink-0" />
-                  <span>২৪/৭ কল করুন: {hotlinePhone}</span>
+                  <span>Call 24/7: {hotlinePhone}</span>
                 </a>
               )}
             </div>
@@ -1997,12 +2112,12 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   </div>
                   <div>
                     <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
-                      কাস্টমার রিভিউ ও কমেন্টস
+                      Customer Reviews & Comments
                     </h4>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span className="font-bold text-amber-500 font-mono">⭐ {ratingMeta.averageRating.toFixed(1)}</span>
                       <span>•</span>
-                      <span>{ratingMeta.totalReviews} টি রিভিউ</span>
+                      <span>{ratingMeta.totalReviews} Reviews</span>
                     </div>
                   </div>
                 </div>
@@ -2012,7 +2127,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   className="px-2.5 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-[#69EBDA] text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
                 >
                   <MessageSquarePlus className="w-3.5 h-3.5" />
-                  <span>কমেন্ট করুন</span>
+                  <span>Comment</span>
                 </button>
               </div>
 
@@ -2020,10 +2135,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="p-3 mb-3.5 rounded-2xl bg-teal-500/10 dark:bg-slate-800/90 border border-teal-500/25 dark:border-white/10 flex items-center justify-between gap-2 shadow-sm">
                 <div>
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                    কার্ড থেকে সরাসরি রেটিং দিন:
+                    Rate directly from card:
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    {userPrevRating ? `আপনার রেটিং: ${userPrevRating}★` : 'স্টারে ক্লিক করে রেটিং দিন'}
+                    {userPrevRating ? `Your rating: ${userPrevRating}★` : 'Click stars to rate'}
                   </span>
                 </div>
                 <div
@@ -2042,7 +2157,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={() => handleDetailCardRating(s)}
                         onMouseEnter={() => setDetailHoverStar(s)}
                         className="p-1 rounded-md hover:scale-125 active:scale-95 transition-transform cursor-pointer"
-                        title={`${s} স্টার রেটিং দিন`}
+                        title={`Rate ${s} stars`}
                       >
                         <Star
                           className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-colors ${
@@ -2080,13 +2195,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 {hotelReviews.length === 0 ? (
                   <div className="text-center py-6 px-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-white/10">
                     <MessageSquare className="w-7 h-7 mx-auto text-slate-400 mb-1.5 opacity-50" />
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">এখনো কোনো কমেন্ট করা হয়নি।</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">No comments yet.</p>
                     <button
                       type="button"
                       onClick={() => handleOpenReviewModal()}
                       className="mt-1.5 text-[11px] font-bold text-teal-600 dark:text-[#69EBDA] hover:underline cursor-pointer"
                     >
-                      প্রথম কমেন্টটি আপনিই করুন
+                      Be the first to comment
                     </button>
                   </div>
                 ) : (
@@ -2115,7 +2230,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                 </span>
                                 {isMyReview && (
                                   <span className="px-1.5 py-0.2 rounded-md bg-teal-500/20 text-teal-700 dark:text-[#69EBDA] text-[9px] font-black">
-                                    আপনি
+                                    You
                                   </span>
                                 )}
                               </div>
@@ -2133,7 +2248,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                   ))}
                                 </div>
                                 <span className="text-[9px] text-slate-400">
-                                  {rev.date || 'সম্প্রতি'}
+                                  {rev.date || 'Recently'}
                                 </span>
                               </div>
                             </div>
@@ -2149,7 +2264,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                   setActiveReviewMenuId(isMenuOpen ? null : rev.id);
                                 }}
                                 className="w-6 h-6 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center cursor-pointer transition-colors"
-                                title="অপশন"
+                                title="Options"
                               >
                                 <MoreVertical className="w-3.5 h-3.5" />
                               </button>
@@ -2168,7 +2283,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                       className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold cursor-pointer"
                                     >
                                       <Edit2 className="w-3 h-3 text-teal-500" />
-                                      <span>এডিট করুন</span>
+                                      <span>Edit</span>
                                     </button>
                                     <button
                                       type="button"
@@ -2176,7 +2291,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                       className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/15 font-semibold cursor-pointer"
                                     >
                                       <Trash2 className="w-3 h-3" />
-                                      <span>মুছে ফেলুন</span>
+                                      <span>Delete</span>
                                     </button>
                                   </motion.div>
                                 )}
@@ -2202,11 +2317,11 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                             }`}
                           >
                             <Heart className={`w-3 h-3 ${isLiked ? 'fill-current scale-110' : ''}`} />
-                            <span>{rev.likes || 0} লাইক</span>
+                            <span>{rev.likes || 0} Likes</span>
                           </button>
 
                           <span className="text-[9px] text-slate-400">
-                            {isLiked ? '✓ লাইক দিয়েছেন' : '১ জন ১টি লাইক'}
+                            {isLiked ? '✓ Liked' : '1 like per person'}
                           </span>
                         </div>
                       </div>
@@ -2223,7 +2338,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     onClick={() => setIsAllCommentsView(true)}
                     className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    <span>See all comments (সব কমেন্ট দেখুন)</span>
+                    <span>See all comments</span>
                     <ChevronRight className="w-3.5 h-3.5 text-teal-600 dark:text-[#69EBDA]" />
                   </button>
                 </div>
@@ -2259,7 +2374,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                    সকল সুবিধা ও ইনফো তালিকা
+                    All Amenities & Info
                   </h3>
                 </div>
                 <button
@@ -2323,7 +2438,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                     {hotel.name}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">সম্পূর্ণ বিবরণ ও নির্দেশিকা</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Full Description & Guide</p>
                 </div>
                 <button
                   onClick={() => setIsFullDetailsOpen(false)}
@@ -2367,13 +2482,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mb-1.5">
-                    বুকিং সফলভাবে সম্পন্ন হয়েছে!
+                    Booking Completed Successfully!
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto mb-3 leading-relaxed">
-                    ধন্যবাদ, <span className="font-bold">{customerName}</span>! আপনার বুকিং অর্ডার সফলভাবে গ্রহণ করা হয়েছে। বুকিং আইডি: <span className="font-mono font-bold text-teal-600 dark:text-[#69EBDA]">{completedBookingId}</span>
+                    Thank you, <span className="font-bold">{customerName}</span>! Your booking order has been received. Booking ID: <span className="font-mono font-bold text-teal-600 dark:text-[#69EBDA]">{completedBookingId}</span>
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">
-                    আমাদের ট্রাভেল এজেন্ট খুব শীঘ্রই আপনার হোয়াটসঅ্যাপ ও ফোনে যোগাযোগ করবেন।
+                    Our travel concierge will contact you via WhatsApp and phone shortly.
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-2.5">
@@ -2384,7 +2499,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                       className="flex-1 py-2.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2"
                     >
                       <MessageCircle className="w-4 h-4 fill-current" />
-                      <span>হোয়াটসঅ্যাপে আপডেট নিন</span>
+                      <span>Get Updates on WhatsApp</span>
                     </a>
                     <button
                       onClick={() => {
@@ -2393,7 +2508,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                       }}
                       className="py-2.5 px-5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white font-bold text-xs sm:text-sm hover:bg-slate-300 cursor-pointer"
                     >
-                      বন্ধ করুন
+                      Close
                     </button>
                   </div>
                 </div>
@@ -2403,13 +2518,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   <div className="flex items-start justify-between pb-2.5 sm:pb-3 border-b border-slate-200 dark:border-white/10">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-[#69EBDA]">
-                        চেকআউট ও বুকিং ফরম
+                        Checkout & Booking Form
                       </span>
                       <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                         {hotel.name}
                       </h3>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {toDisplayDate(checkInDate)} থেকে {toDisplayDate(checkOutDate)} ({calculatedDays} দিন, {roomCount}টি রুম)
+                        {toDisplayDate(checkInDate)} to {toDisplayDate(checkOutDate)} ({calculatedDays} Days, {roomCount} Rooms)
                       </p>
                     </div>
                     <button
@@ -2432,21 +2547,21 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   <div className="space-y-2.5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        আপনার পূর্ণ নাম <span className="text-red-500">*</span>
+                        Your Full Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="যেমন: মোঃ আরিফুল ইসলাম"
+                        placeholder="e.g. Ariful Islam"
                         className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        ইমেইল (ঐচ্ছিক / Gmail)
+                        Email (Optional / Gmail)
                       </label>
                       <input
                         type="email"
@@ -2460,7 +2575,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          ফোন নম্বর <span className="text-red-500">*</span>
+                          Phone Number <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -2474,7 +2589,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          হোয়াটসঅ্যাপ নম্বর <span className="text-red-500">*</span>
+                          WhatsApp Number <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -2495,14 +2610,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onChange={(e) => setSameAsPhone(e.target.checked)}
                         className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
-                      <span>ফোন নম্বর এবং হোয়াটসঅ্যাপ নম্বর একই</span>
+                      <span>Phone number and WhatsApp number are the same</span>
                     </label>
                   </div>
 
                   {/* Promo Code Box */}
                   <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1.5">
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      প্রোমো কোড (Promo Code)
+                      Promo Code
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -2517,13 +2632,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={handleApplyPromo}
                         className="px-3.5 py-1.5 rounded-xl bg-slate-800 dark:bg-teal-600 text-white font-bold text-xs hover:bg-slate-900 dark:hover:bg-teal-500 transition-colors cursor-pointer"
                       >
-                        প্রয়োগ
+                        Apply
                       </button>
                     </div>
 
                     {appliedPromo && (
                       <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                        ✓ {appliedPromo.label} (-৳{appliedPromo.discount.toLocaleString('en-IN')})
+                        ✓ {appliedPromo.label} (-BDT {appliedPromo.discount.toLocaleString('en-IN')})
                       </p>
                     )}
                     {promoError && (
@@ -2536,38 +2651,38 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>
                         {isTransport
-                          ? `গাড়ি ভাড়া (${calculatedDays} দিন • ${seatCount} সিট${routeFrom || routeTo ? ` • ${routeFrom || '?'} → ${routeTo || '?'}` : ''})`
+                          ? `Transport Fare (${calculatedDays} days • ${seatCount} seats${routeFrom || routeTo ? ` • ${routeFrom || '?'} → ${routeTo || '?'}` : ''})`
                           : isRestaurant
                             ? selectedFoodList.length > 0
-                              ? `নির্বাচিত খাবার (${totalSelectedFoodQty} আইটেম × ${calculatedDays} দিন • ${restaurantGuests} জন)`
-                              : `ডাইনিং চার্জ (${calculatedDays} দিন × ${restaurantGuests} জন)`
-                            : `রুম ভাড়া (${calculatedDays} দিন × ${roomCount} রুম)`}
+                              ? `Selected Food (${totalSelectedFoodQty} items × ${calculatedDays} days • ${restaurantGuests} guests)`
+                              : `Dining Charge (${calculatedDays} days × ${restaurantGuests} guests)`
+                            : `Room Fare (${calculatedDays} days × ${roomCount} rooms)`}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        ৳ {baseRentPrice.toLocaleString('en-IN')}
+                        BDT {baseRentPrice.toLocaleString('en-IN')}
                       </span>
                     </div>
 
                     {appliedPromo && (
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-                        <span>প্রোমো ছাড় ({appliedPromo.code})</span>
-                        <span>- ৳ {discountAmount.toLocaleString('en-IN')}</span>
+                        <span>Promo Discount ({appliedPromo.code})</span>
+                        <span>- BDT {discountAmount.toLocaleString('en-IN')}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>ভ্যাট ও ট্যাক্স ({vatTaxPercentage}%)</span>
+                      <span>VAT & Taxes ({vatTaxPercentage}%)</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        + ৳ {vatTaxAmount.toLocaleString('en-IN')}
+                        + BDT {vatTaxAmount.toLocaleString('en-IN')}
                       </span>
                     </div>
 
                     <div className="pt-2 border-t border-slate-300 dark:border-white/10 flex items-center justify-between">
                       <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white">
-                        সর্বমোট মূল্য (Grand Total)
+                        Grand Total
                       </span>
                       <span className="text-lg sm:text-xl font-black text-teal-600 dark:text-[#69EBDA] font-['Outfit',sans-serif]">
-                        ৳ {grandTotal.toLocaleString('en-IN')}
+                        BDT {grandTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
                   </div>
@@ -2579,11 +2694,11 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="w-full py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <span>অর্ডার প্রসেস হচ্ছে...</span>
+                      <span>Processing Order...</span>
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        <span>কনফার্ম বুকিং অর্ডার</span>
+                        <span>Confirm Booking Order</span>
                       </>
                     )}
                   </button>
@@ -2620,10 +2735,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      হোটেল হেল্প সেন্টার ও বুকিং সহায়তা
+                      Hotel Help Center & Support
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      অতিথি সংখ্যার বিশেষ নির্দেশিকা
+                      Guest Capacity Guidelines
                     </p>
                   </div>
                 </div>
@@ -2639,10 +2754,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               {/* Message Box */}
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-1.5">
                 <p className="text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-200">
-                  {roomCount}টি রুমে সর্বোচ্চ {roomCount * 3} জন অতিথি (প্রতি রুমে সর্বোচ্চ ৩ জন) অবস্থান করতে পারবেন।
+                  Up to {roomCount * 3} guests can stay across {roomCount} room(s) (maximum 3 guests per room).
                 </p>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  আপনি <span className="font-bold">{pendingGuestCount} জন অতিথি</span> নির্বাচন করেছেন। {pendingGuestCount} জন অতিথির স্বাচ্ছন্দ্যে থাকার জন্য অনুগ্রহ করে কমপক্ষে <span className="font-bold">{Math.max(roomCount + 1, Math.ceil(pendingGuestCount / 3))}টি রুম</span> বুক করুন অথবা বিশেষ ব্যবস্থা ও অতিরিক্ত বেডের জন্য সরাসরি হোটেল হেল্প সেন্টারের সাথে যোগাযোগ করুন।
+                  You have selected <span className="font-bold">{pendingGuestCount} guests</span>. For comfortable stay of {pendingGuestCount} guests, please book at least <span className="font-bold">{Math.max(roomCount + 1, Math.ceil(pendingGuestCount / 3))} room(s)</span> or contact the hotel support for extra beds and special arrangements.
                 </p>
               </div>
 
@@ -2657,7 +2772,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 }}
                 className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{Math.max(roomCount + 1, Math.ceil(pendingGuestCount / 3))}টি রুম বুক করুন (প্রয়োজনীয় রুম যোগ করুন)</span>
+                <span>Book {Math.max(roomCount + 1, Math.ceil(pendingGuestCount / 3))} Rooms (Add Required Rooms)</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
 
@@ -2665,19 +2780,19 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               {(rawWa || cleanHotlineTel) && (
               <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-white/10">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block text-center">
-                  অথবা সরাসরি যোগাযোগ করুন
+                  Or Contact Directly
                 </span>
                 {rawWa && (
                   <a
                     href={`https://wa.me/${rawWa}?text=${encodeURIComponent(
-                      `হ্যালো! আমি ${hotel.name}-এ ${roomCount}টি রুমে ${pendingGuestCount} জন অতিথির থাকার নিয়ম/এক্সট্রা বেড সুবিধা সম্পর্কে জানতে চাই।`
+                      `Hello! I would like to inquire about guest policies / extra bed facilities for ${pendingGuestCount} guests across ${roomCount} room(s) at ${hotel.name}.`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-2.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4 fill-current" />
-                    <span>হোয়াটসঅ্যাপে হেল্প সেন্টারে মেসেজ দিন</span>
+                    <span>Message Support on WhatsApp</span>
                   </a>
                 )}
 
@@ -2687,7 +2802,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-[#69EBDA]" />
-                    <span>২৪/৭ হেল্পলাইনে কল করুন: {hotlinePhone}</span>
+                    <span>Call 24/7 Helpline: {hotlinePhone}</span>
                   </a>
                 )}
               </div>
@@ -2740,7 +2855,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div className="min-w-0">
                   <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
-                    {editingReviewId ? 'রিভিউ আপডেট করুন' : 'আপনার রিভিউ লিখুন'}
+                    {editingReviewId ? 'Update Review' : 'Write Your Review'}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                     {hotel.name}
@@ -2759,7 +2874,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 {/* Star Rating Selector */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    রেটিং দিন
+                    Rate
                   </label>
                   <div className="flex items-center gap-1.5">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -2784,14 +2899,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 {/* Clean Text Box */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    মতামত
+                    Comment
                   </label>
                   <textarea
                     required
                     rows={4}
                     value={reviewCommentText}
                     onChange={(e) => setReviewCommentText(e.target.value)}
-                    placeholder="আপনার অভিজ্ঞতা ও মতামত এখানে লিখুন..."
+                    placeholder="Write your experience and feedback here..."
                     className="w-full px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-white/15 focus:border-[#69EBDA] focus:ring-2 focus:ring-[#69EBDA]/25 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none resize-none leading-relaxed"
                   />
                 </div>
@@ -2802,13 +2917,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     onClick={() => setIsReviewModalOpen(false)}
                     className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold cursor-pointer transition-colors"
                   >
-                    বাতিল
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#69EBDA]/25 cursor-pointer transition-all"
                   >
-                    {editingReviewId ? 'আপডেট করুন' : 'রিভিউ সাবমিট করুন'}
+                    {editingReviewId ? 'Update Review' : 'Submit Review'}
                   </button>
                 </div>
               </form>
@@ -2818,7 +2933,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
       </AnimatePresence>
 
       {/* ============================================================== */}
-      {/* MODAL 6: Restaurant Food Menu Modal (সকাল / দুপুর / রাত)        */}
+      {/* MODAL 6: Restaurant Food Menu Modal (Breakfast / Lunch / Dinner) */}
       {/* ============================================================== */}
       <AnimatePresence>
         {isFoodMenuModalOpen && (
@@ -2842,7 +2957,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                      খাবারের মেনু (Food Menu)
+                      Food Menu
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Select multiple foods and quantities as desired.
@@ -2867,14 +2982,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     }}
                     disabled={!showAllDaysInSummary && activeFoodDateIndex <= 0}
                     className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
-                    title="আগের তারিখ"
+                    title="Previous Date"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="text-center flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
                       {showAllDaysInSummary
-                        ? `সকল দিন (${availableFoodDates.length} দিন)`
+                        ? `All Days (${availableFoodDates.length} Days)`
                         : `Day ${activeFoodDateIndex + 1} • ${toDisplayDate(activeFoodDate)}`}
                     </span>
                     {availableFoodDates.length > 1 && (
@@ -2883,7 +2998,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={() => setShowAllDaysInSummary((v) => !v)}
                         className="px-2 py-0.5 rounded-lg bg-teal-500/15 text-[10px] font-extrabold text-teal-700 dark:text-[#69EBDA] cursor-pointer hover:bg-teal-500/25"
                       >
-                        {showAllDaysInSummary ? 'একটি দিন' : 'সব দিন'}
+                        {showAllDaysInSummary ? 'Single Day' : 'All Days'}
                       </button>
                     )}
                   </div>
@@ -2895,7 +3010,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     }}
                     disabled={!showAllDaysInSummary && activeFoodDateIndex >= availableFoodDates.length - 1}
                     className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
-                    title="পরের তারিখ"
+                    title="Next Date"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -2937,12 +3052,12 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 </div>
               </div>
 
-              {/* Top 3 Meal Switching Buttons: সকাল / দুপুর / রাত */}
+              {/* Top 3 Meal Switching Buttons: Breakfast / Lunch / Dinner */}
               <div className="px-5 sm:px-6 pt-3 pb-2 grid grid-cols-3 gap-2 border-b border-slate-100 dark:border-white/5 bg-slate-50/70 dark:bg-slate-950/40">
                 {[
-                  { id: 'breakfast', label: 'সকাল (Breakfast)' },
-                  { id: 'lunch', label: 'দুপুর (Lunch)' },
-                  { id: 'dinner', label: 'রাত (Dinner)' }
+                  { id: 'breakfast', label: 'Breakfast' },
+                  { id: 'lunch', label: 'Lunch' },
+                  { id: 'dinner', label: 'Dinner' }
                 ].map((tab) => {
                   const active = activeMealTab === tab.id;
                   return (
@@ -2981,7 +3096,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                           src={item.photo}
                           alt={item.name}
                           onClick={() => setPreviewFoodItem(item)}
-                          title="বড় করে দেখতে ক্লিক করুন"
+                          title="Click to preview enlarged photo"
                           className="w-16 h-16 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-white/10 cursor-pointer hover:scale-105 transition-transform"
                         />
                         <div className="min-w-0">
@@ -2989,7 +3104,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                             {item.name}
                           </h4>
                           <p className="text-xs font-black text-teal-700 dark:text-[#69EBDA] mt-0.5">
-                            ৳ {item.price.toLocaleString('en-IN')}
+                            BDT {item.price.toLocaleString('en-IN')}
                           </p>
                         </div>
                       </div>
@@ -3035,10 +3150,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
               <div className="px-5 sm:px-6 py-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between gap-3">
                 <div>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold">
-                    মোট সিলেক্ট করা: {totalSelectedFoodQty} টি খাবার
+                    Total Selected: {totalSelectedFoodQty} items
                   </span>
                   <span className="text-base font-black text-slate-900 dark:text-white">
-                    সর্বমোট: ৳ {selectedFoodTotalAllDates.toLocaleString('en-IN')}
+                    Total: BDT {selectedFoodTotalAllDates.toLocaleString('en-IN')}
                   </span>
                 </div>
                 <button
@@ -3081,10 +3196,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                      সিলেক্ট করা খাবারের তালিকা
+                      Selected Foods List
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      মোট {totalSelectedFoodQty} টি আইটেম • সর্বমোট ৳ {selectedFoodTotalAllDates.toLocaleString('en-IN')}
+                      Total {totalSelectedFoodQty} items • Total BDT {selectedFoodTotalAllDates.toLocaleString('en-IN')}
                     </p>
                   </div>
                   <button
@@ -3106,14 +3221,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     }}
                     disabled={!showAllDaysInSummary && activeFoodDateIndex <= 0}
                     className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
-                    title="আগের তারিখ"
+                    title="Previous Date"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="text-center flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
                       {showAllDaysInSummary
-                        ? `সকল দিন (${availableFoodDates.length} দিন)`
+                        ? `All Days (${availableFoodDates.length} Days)`
                         : `Day ${activeFoodDateIndex + 1} • ${toDisplayDate(activeFoodDate)}`}
                     </span>
                     {availableFoodDates.length > 1 && (
@@ -3122,7 +3237,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                         onClick={() => setShowAllDaysInSummary((v) => !v)}
                         className="px-2 py-0.5 rounded-lg bg-teal-500/15 text-[10px] font-extrabold text-teal-700 dark:text-[#69EBDA] cursor-pointer hover:bg-teal-500/25"
                       >
-                        {showAllDaysInSummary ? 'একটি দিন' : 'সব দিন'}
+                        {showAllDaysInSummary ? 'Single Day' : 'All Days'}
                       </button>
                     )}
                   </div>
@@ -3134,7 +3249,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     }}
                     disabled={!showAllDaysInSummary && activeFoodDateIndex >= availableFoodDates.length - 1}
                     className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#69EBDA]"
-                    title="পরের তারিখ"
+                    title="Next Date"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -3191,10 +3306,10 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                     return (
                       <div className="py-8 text-center space-y-2">
                         <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
-                          Guest {activeFoodGuest}-এর জন্য এখনো কোনো খাবার সিলেক্ট করা হয়নি।
+                          No food selected for Guest {activeFoodGuest} yet.
                         </p>
                         <p className="text-xs text-slate-400">
-                          উপরে অন্য গেস্ট ট্যাবে ক্লিক করুন অথবা "আরও খাবার যোগ করুন" বাটনে ক্লিক করুন।
+                          Click another guest tab above or click "Add More Food" button.
                         </p>
                       </div>
                     );
@@ -3216,13 +3331,13 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                 Day {grp.dayNumber} • {toDisplayDate(grp.dStr)}
                               </span>
                               <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
-                                ৳ {daySubtotal.toLocaleString('en-IN')}
+                                BDT {daySubtotal.toLocaleString('en-IN')}
                               </span>
                             </div>
 
                             {grp.items.map((item) => {
                               const mealLabel =
-                                item.meal === 'breakfast' ? 'সকাল' : item.meal === 'lunch' ? 'দুপুর' : 'রাত';
+                                item.meal === 'breakfast' ? 'Breakfast' : item.meal === 'lunch' ? 'Lunch' : 'Dinner';
                               return (
                                 <div
                                   key={`${grp.dStr}-${item.key}`}
@@ -3233,7 +3348,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                       src={item.photo}
                                       alt={item.name}
                                       onClick={() => setPreviewFoodItem(item)}
-                                      title="বড় করে দেখতে ক্লিক করুন"
+                                      title="Click to preview enlarged photo"
                                       className="w-12 h-12 rounded-xl object-cover shrink-0 cursor-pointer hover:scale-105 transition-transform"
                                     />
                                     <div className="min-w-0">
@@ -3244,9 +3359,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                                         {item.name}
                                       </h4>
                                       <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                        ৳ {item.price.toLocaleString('en-IN')} × {item.qty} ={' '}
+                                        BDT {item.price.toLocaleString('en-IN')} × {item.qty} ={' '}
                                         <span className="text-teal-700 dark:text-[#69EBDA] font-black">
-                                          ৳ {(item.price * item.qty).toLocaleString('en-IN')}
+                                          BDT {(item.price * item.qty).toLocaleString('en-IN')}
                                         </span>
                                       </p>
                                     </div>
@@ -3279,9 +3394,9 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                       })}
 
                       <div className="pt-2 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-extrabold text-slate-700 dark:text-slate-200">
-                        <span>Guest {activeFoodGuest} মোট ({guestDayGroups.length} দিন):</span>
+                        <span>Guest {activeFoodGuest} Total ({guestDayGroups.length} days):</span>
                         <span className="text-teal-700 dark:text-[#69EBDA]">
-                          ৳ {guestAllDaysTotal.toLocaleString('en-IN')}
+                          BDT {guestAllDaysTotal.toLocaleString('en-IN')}
                         </span>
                       </div>
                     </>
@@ -3298,14 +3413,14 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   }}
                   className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold cursor-pointer"
                 >
-                  আরও খাবার যোগ করুন
+                  Add More Food
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsSelectedFoodsModalOpen(false)}
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#69EBDA] to-teal-400 text-slate-950 text-xs font-black cursor-pointer"
                 >
-                  ঠিক আছে
+                  Got It
                 </button>
               </div>
             </motion.div>
@@ -3352,7 +3467,7 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, onBack, onBookingSu
                   {previewFoodItem.name}
                 </h4>
                 <span className="text-base sm:text-lg font-black text-teal-700 dark:text-[#69EBDA] shrink-0">
-                  ৳ {Number(previewFoodItem.price || 0).toLocaleString('en-IN')}
+                  BDT {Number(previewFoodItem.price || 0).toLocaleString('en-IN')}
                 </span>
               </div>
             </motion.div>

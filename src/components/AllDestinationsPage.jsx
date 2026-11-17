@@ -6,17 +6,21 @@ import { StorageService } from '../services/storageService';
 export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCategory }) => {
   const [destinations, setDestinations] = useState(() => StorageService.getDestinations());
   const [allPackages, setAllPackages] = useState(() => StorageService.getPackages());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().allDestinationsPage);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const syncDestinations = () => setDestinations(StorageService.getDestinations());
     const syncPackages = () => setAllPackages(StorageService.getPackages());
+    const syncSection = () => setSecText(StorageService.getSectionSettings().allDestinationsPage);
 
     window.addEventListener('app:destinations-updated', syncDestinations);
     window.addEventListener('app:packages-updated', syncPackages);
+    window.addEventListener('app:section-settings-updated', syncSection);
     return () => {
       window.removeEventListener('app:destinations-updated', syncDestinations);
       window.removeEventListener('app:packages-updated', syncPackages);
+      window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
 
@@ -55,20 +59,26 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
             className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#5C6977]/85 hover:bg-[#5C6977] text-white border border-white/25 hover:border-[#69EBDA] text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md"
           >
             <ArrowLeft className="w-4 h-4 text-[#69EBDA]" />
-            <span>ফিরে যান</span>
+            <span>Back</span>
           </button>
 
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-2 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              All Travel Destinations ({destinations.length})
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-              সকল ভ্রমণ গন্তব্য ও প্যাকেজ
-            </h1>
-            <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm sm:text-base max-w-2xl font-medium">
-              আমাদের সকল গন্তব্যের কার্ডগুলো এখান থেকে দেখে আপনার পছন্দের গন্তব্য বেছে নিন।
-            </p>
+            {secText?.badge && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/20 border border-[#69EBDA]/40 backdrop-blur-md mb-2 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
+                <Sparkles className="w-3.5 h-3.5" />
+                {secText.badge} ({destinations.length})
+              </div>
+            )}
+            {secText?.title && (
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif]">
+                {secText.title}
+              </h1>
+            )}
+            {secText?.subtitle && (
+              <p className="mt-2 text-slate-700 dark:text-slate-300 text-sm sm:text-base max-w-2xl font-medium">
+                {secText.subtitle}
+              </p>
+            )}
           </div>
         </div>
 
@@ -79,7 +89,7 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="গন্তব্য খুঁজুন..."
+            placeholder="Search destinations..."
             className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/85 dark:bg-slate-900/75 border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white placeholder-slate-400 text-sm font-medium outline-none focus:border-[#69EBDA]"
           />
         </div>
@@ -88,7 +98,7 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
       {/* All Destination Cards Grid */}
       {filteredDestinations.length === 0 ? (
         <div className="p-12 rounded-3xl bg-white/70 dark:bg-slate-900/70 border border-white/20 text-center text-slate-600 dark:text-slate-300 font-semibold">
-          কোনো গন্তব্য পাওয়া যায়নি।
+          No destinations found.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -137,7 +147,7 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
 
                   <div className="px-3.5 py-1.5 rounded-full bg-slate-950/70 backdrop-blur-xl border border-[#69EBDA]/50 text-xs font-extrabold text-[#69EBDA] shadow-lg shrink-0 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#69EBDA] animate-pulse" />
-                    <span>{packageCount} টি প্যাকেজ</span>
+                    <span>{packageCount} Packages</span>
                   </div>
                 </div>
 
@@ -147,7 +157,7 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
                     {resortName && (
                       <div className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#69EBDA]/15 border border-[#69EBDA]/35 text-[11px] font-bold text-[#69EBDA] max-w-full">
                         <Hotel className="w-3.5 h-3.5 text-[#69EBDA] shrink-0" />
-                        <span className="truncate">রিসোর্ট: {resortName}</span>
+                        <span className="truncate">Resort: {resortName}</span>
                       </div>
                     )}
 
@@ -174,10 +184,10 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
 
                     <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
                       <span className="group-hover:text-[#69EBDA] transition-colors font-medium truncate">
-                        {cat.destinationName || cat.title} ({packageCount} টি প্যাকেজ)
+                        {cat.destinationName || cat.title} ({packageCount} Packages)
                       </span>
                       <span className="text-[#69EBDA] font-bold group-hover:translate-x-1 transition-transform shrink-0 ml-2">
-                        প্যাকেজ দেখুন &rarr;
+                        View Packages &rarr;
                       </span>
                     </div>
                   </div>

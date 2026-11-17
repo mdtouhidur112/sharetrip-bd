@@ -338,8 +338,8 @@ export const BannerControl = ({ language = 'bn', isLight = false, onShowToast })
                 fontWeight: bannerData.headlineBold ? '800' : '400'
               }}
             >
-              {bannerData.headline || 'সবার মুখে মুখে ফেরা'}
-              <br />
+              {bannerData.headline ?? 'Unforgettable & Iconic'}
+              {(bannerData.headline ?? 'Unforgettable & Iconic') && (bannerData.headlineHighlight ?? 'Dream Travel Experience') && <br />}
               <span 
                 className="drop-shadow-sm transition-all"
                 style={{
@@ -347,7 +347,7 @@ export const BannerControl = ({ language = 'bn', isLight = false, onShowToast })
                   fontWeight: bannerData.headlineBold ? '800' : '400'
                 }}
               >
-                {bannerData.headlineHighlight || 'স্বপ্নের ভ্রমণ অভিজ্ঞতা'}
+                {bannerData.headlineHighlight ?? 'Dream Travel Experience'}
               </span>
             </h2>
 
@@ -359,7 +359,7 @@ export const BannerControl = ({ language = 'bn', isLight = false, onShowToast })
                 fontWeight: bannerData.subtitleBold ? '700' : '400'
               }}
             >
-              {bannerData.subtitle || 'শীর্ষস্থানীয় ট্রাভেল স্থপতিদের নিখুঁত পরিকল্পনায় অংশ নিন...'}
+              {bannerData.subtitle ?? ''}
             </p>
 
             {/* Current Slide Location Indicator */}
@@ -388,20 +388,30 @@ export const BannerControl = ({ language = 'bn', isLight = false, onShowToast })
               <span>{language === 'en' ? 'Primary Headline Text' : 'মূল শিরোনাম টেক্সট'}</span>
             </label>
             
-            {/* Bold Toggle */}
-            <button
-              type="button"
-              onClick={() => updateField('headlineBold', !bannerData.headlineBold)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
-                bannerData.headlineBold
-                  ? 'bg-[#69EBDA]/20 text-[#69EBDA] border-[#69EBDA]/50'
-                  : 'text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-200'
-              }`}
-              title="বোল্ড অন/অফ"
-            >
-              <Bold className="w-3 h-3" />
-              <span>{language === 'en' ? 'Bold' : 'বোল্ড'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => updateField('headline', '')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 cursor-pointer"
+                title="Delete Headline Text"
+              >
+                Delete
+              </button>
+              {/* Bold Toggle */}
+              <button
+                type="button"
+                onClick={() => updateField('headlineBold', !bannerData.headlineBold)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                  bannerData.headlineBold
+                    ? 'bg-[#69EBDA]/20 text-[#69EBDA] border-[#69EBDA]/50'
+                    : 'text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-200'
+                }`}
+                title="বোল্ড অন/অফ"
+              >
+                <Bold className="w-3 h-3" />
+                <span>{language === 'en' ? 'Bold' : 'বোল্ড'}</span>
+              </button>
+            </div>
           </div>
 
           <input
@@ -473,13 +483,21 @@ export const BannerControl = ({ language = 'bn', isLight = false, onShowToast })
               <Sparkles className="w-4 h-4 text-[#69EBDA]" />
               <span>{language === 'en' ? 'Highlight Accent Phrase' : 'হাইলাইট অ্যাকসেন্ট টেক্সট'}</span>
             </label>
+            <button
+              type="button"
+              onClick={() => updateField('headlineHighlight', '')}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 cursor-pointer"
+              title="Delete Highlight Text"
+            >
+              Delete
+            </button>
           </div>
 
           <input
             type="text"
             value={bannerData.headlineHighlight}
             onChange={(e) => updateField('headlineHighlight', e.target.value)}
-            placeholder="স্বপ্নের ভ্রমণ অভিজ্ঞতা"
+            placeholder="Dream Travel Experience (leave empty to hide)"
             className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#69EBDA]"
           />
 

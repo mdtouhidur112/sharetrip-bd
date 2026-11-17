@@ -7,6 +7,7 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
   const [hotels, setHotels] = useState(() => StorageService.getHotels() || []);
   const [bookings, setBookings] = useState(() => StorageService.getBookings() || []);
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
+  const [secText, setSecText] = useState(() => StorageService.getSectionSettings().popularHotels);
   const [, setReviewVersion] = useState(0);
 
   useEffect(() => {
@@ -22,15 +23,20 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
     const syncServicesControl = () => {
       setServicesControl(StorageService.getServicesControl());
     };
+    const syncSection = () => {
+      setSecText(StorageService.getSectionSettings().popularHotels);
+    };
     window.addEventListener('app:hotels-updated', syncHotels);
     window.addEventListener('app:bookings-updated', syncBookings);
     window.addEventListener('app:hotel-reviews-updated', syncReviews);
     window.addEventListener('app:services-control-updated', syncServicesControl);
+    window.addEventListener('app:section-settings-updated', syncSection);
     return () => {
       window.removeEventListener('app:hotels-updated', syncHotels);
       window.removeEventListener('app:bookings-updated', syncBookings);
       window.removeEventListener('app:hotel-reviews-updated', syncReviews);
       window.removeEventListener('app:services-control-updated', syncServicesControl);
+      window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
 
@@ -81,16 +87,22 @@ export const SingleHotelsGrid = ({ onSelectHotel, selectedCategory, searchQuery 
       {/* Section Header */}
       <div className="max-w-7xl mx-auto mb-8 sm:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
-            <Flame className="w-3.5 h-3.5" />
-            Most Popular Bookings
-          </div>
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif] transition-colors">
-            সর্বাধিক জনপ্রিয় বুকিংসমূহ
-          </h2>
-          <p className="mt-1.5 sm:mt-2 text-slate-700 dark:text-slate-300 text-xs sm:text-base max-w-xl font-medium transition-colors">
-            ভ্রমণকারীদের সবচেয়ে বেশি বুকিংকৃত ও সেরা রেটিংপ্রাপ্ত জনপ্রিয় হোটেল ও রিসোর্টসমূহ।
-          </p>
+          {secText?.badge && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#69EBDA]/25 border border-[#69EBDA]/45 backdrop-blur-md mb-3 text-xs font-bold tracking-wider text-teal-950 dark:text-[#69EBDA] uppercase">
+              <Flame className="w-3.5 h-3.5" />
+              {secText.badge}
+            </div>
+          )}
+          {secText?.title && (
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white font-['Outfit',sans-serif] transition-colors">
+              {secText.title}
+            </h2>
+          )}
+          {secText?.subtitle && (
+            <p className="mt-1.5 sm:mt-2 text-slate-700 dark:text-slate-300 text-xs sm:text-base max-w-xl font-medium transition-colors">
+              {secText.subtitle}
+            </p>
+          )}
         </div>
       </div>
 

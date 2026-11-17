@@ -77,7 +77,7 @@ export const BookingInquiryWidget = ({
   }, [user]);
 
   // Inquiry Form State
-  const [inquiryTopic, setInquiryTopic] = useState('কাস্টম তারিখ ও রুটের নমনীয়তা');
+  const [inquiryTopic, setInquiryTopic] = useState('Custom Date & Route Flexibility');
   const [inquiryMessage, setInquiryMessage] = useState('');
 
   // Submission State
@@ -108,8 +108,8 @@ export const BookingInquiryWidget = ({
     pkg ||
     packagePool[0] || {
       id: 'custom-tour',
-      title: 'কাস্টম ট্যুর প্যাকেজ',
-      shortTitle: 'কাস্টম ট্যুর প্যাকেজ',
+      title: 'Custom Tour Package',
+      shortTitle: 'Custom Tour Package',
       duration: '3 Days / 2 Nights',
       price: 299,
       advancePaymentPercent: 50
@@ -262,18 +262,18 @@ export const BookingInquiryWidget = ({
 
   // Handle WhatsApp direct click from within widget
   const handleDirectWhatsApp = () => {
-    const pkgTitle = currentPkg?.shortTitle || currentPkg?.title || 'ট্যুর প্যাকেজ';
+    const pkgTitle = currentPkg?.shortTitle || currentPkg?.title || 'Tour Package';
     const contactInfo = StorageService.getContactInfo();
     const rawWa = (contactInfo?.whatsapp || '18005550199').replace(/[^0-9]/g, '') || '18005550199';
 
     const activeServiceNames = [
-      selectedServices.hotel ? 'হোটেল' : null,
-      selectedServices.transport ? 'পরিবহন' : null,
-      selectedServices.dining ? 'রেস্তোরাঁ/ডাইনিং' : null
+      selectedServices.hotel ? 'Hotel' : null,
+      selectedServices.transport ? 'Transport' : null,
+      selectedServices.dining ? 'Restaurant/Dining' : null
     ].filter(Boolean).join(', ');
 
     const msg = encodeURIComponent(
-      `হ্যালো এথেরিয়া ট্রাভেলস, আমি ${checkInDate} থেকে ${checkOutDate} (${selectedDays} দিন, ${guestsCount} জন) "${pkgTitle}" প্যাকেজে [সার্ভিস: ${activeServiceNames || 'বেস প্যাকেজ'}] বুকিং করতে আগ্রহী। সর্বমোট হিসাব: $${totalPrice}। বিস্তারিত জানাবেন কি?`
+      `Hello Aetheria Travels, I am interested in booking "${pkgTitle}" from ${checkInDate} to ${checkOutDate} (${selectedDays} days, ${guestsCount} guests) [Services: ${activeServiceNames || 'Base Package'}]. Total estimate: $${totalPrice}. Could you please provide more details?`
     );
     window.open(`https://wa.me/${rawWa}?text=${msg}`, '_blank', 'noopener,noreferrer');
   };
@@ -357,21 +357,21 @@ export const BookingInquiryWidget = ({
         <div className="flex items-center gap-2 mb-2.5 flex-wrap">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#69EBDA]/20 text-[#69EBDA] text-xs font-bold border border-[#69EBDA]/40">
             <Sparkles className="w-3.5 h-3.5" />
-            ৩-ইন-১ স্মার্ট বুকিং ইঞ্জিন
+            3-in-1 Smart Booking Engine
           </div>
           <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30">
             <CalendarCheck className="w-3 h-3 text-[#69EBDA]" />
-            পরবর্তী খালি তারিখ: {nextAvailable.formattedBn}
+            Next Available Date: {nextAvailable.formattedEn || nextAvailable.formattedBn}
           </div>
         </div>
 
         <h3 className="text-xl sm:text-2xl font-extrabold text-white font-['Outfit',sans-serif]">
-          {activeTab === 'booking' ? 'সার্ভিস ও তারিখ কাস্টমাইজ করে বুক করুন' : 'সরাসরি ভ্রমণ অনুসন্ধান'}
+          {activeTab === 'booking' ? 'Customize Services & Dates to Book' : 'Direct Travel Inquiry'}
         </h3>
         <p className="mt-1 text-slate-100 dark:text-slate-300 text-xs font-medium">
           {activeTab === 'booking'
-            ? 'ক্যালেন্ডার থেকে চেক-ইন/চেক-আউট তারিখ এবং হোটেল, গাড়ি বা ডাইনিং সার্ভিস পছন্দমতো বেছে নিন।'
-            : 'কাস্টম ভ্রমণ পরিকল্পনা বা প্রাইভেট গ্রুপ অফার জানতে আমাদের লিখুন।'}
+            ? 'Select check-in/check-out dates from the calendar and customize hotel, transport, or dining services.'
+            : 'Write to us for custom travel itineraries or private group offers.'}
         </p>
 
         {/* Tab Switcher Pills */}
@@ -396,7 +396,7 @@ export const BookingInquiryWidget = ({
                 />
               )}
               <CreditCard className="w-4 h-4 relative z-10" />
-              <span className="relative z-10">স্মার্ট বুকিং</span>
+              <span className="relative z-10">Smart Booking</span>
             </button>
 
             <button
@@ -418,7 +418,7 @@ export const BookingInquiryWidget = ({
                 />
               )}
               <MessageSquare className="w-4 h-4 relative z-10" />
-              <span className="relative z-10">দ্রুত অনুসন্ধান</span>
+              <span className="relative z-10">Quick Inquiry</span>
             </button>
           </div>
         )}
@@ -434,47 +434,47 @@ export const BookingInquiryWidget = ({
             </div>
 
             <div className="inline-block px-3 py-1 rounded-full bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-mono font-bold tracking-wider">
-              রেফারেন্স #{confirmationData.id}
+              Reference #{confirmationData.id}
             </div>
 
             <h4 className="text-2xl font-black text-white font-['Outfit',sans-serif]">
-              {confirmationData.type === 'booking' ? 'ভ্রমণ বুকিং ও তারিখ লক নিশ্চিত হয়েছে!' : 'অনুসন্ধান বার্তা পাঠানো হয়েছে!'}
+              {confirmationData.type === 'booking' ? 'Travel Booking & Date Lock Confirmed!' : 'Inquiry Message Sent!'}
             </h4>
 
             <p className="text-slate-100 dark:text-slate-300 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
-              ধন্যবাদ, <strong className="text-white">{confirmationData.fullName}</strong>। আপনার নির্বাচিত তারিখ ক্যালেন্ডারে সংরক্ষিত হয়েছে এবং বিবরণ <span className="text-[#69EBDA] font-semibold">{confirmationData.email}</span> ঠিকানায় পাঠানো হয়েছে।
+              Thank you, <strong className="text-white">{confirmationData.fullName}</strong>. Your selected dates have been reserved in the calendar and details have been sent to <span className="text-[#69EBDA] font-semibold">{confirmationData.email}</span>.
             </p>
           </div>
 
           {/* Receipt Breakdown Card */}
           <div className="p-5 rounded-2xl bg-slate-800/50 dark:bg-white/[0.04] backdrop-blur-xl border border-white/20 dark:border-white/15 space-y-2.5 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-white/15">
-              <span className="text-slate-300">নির্বাচিত প্যাকেজ</span>
+              <span className="text-slate-300">Selected Package</span>
               <span className="font-bold text-white text-right">{confirmationData.packageTitle}</span>
             </div>
 
             {confirmationData.type === 'booking' && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300">চেক-ইন ➔ চেক-আউট</span>
-                  <span className="font-bold text-[#69EBDA]">{confirmationData.checkInDate} ➔ {confirmationData.checkOutDate} ({confirmationData.selectedDays} দিন)</span>
+                  <span className="text-slate-300">Check-in ➔ Check-out</span>
+                  <span className="font-bold text-[#69EBDA]">{confirmationData.checkInDate} ➔ {confirmationData.checkOutDate} ({confirmationData.selectedDays} Days)</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300">মোট অতিথি (Guests)</span>
-                  <span className="font-semibold text-white">{confirmationData.travelers} জন</span>
+                  <span className="text-slate-300">Total Guests</span>
+                  <span className="font-semibold text-white">{confirmationData.travelers} Guests</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300">নির্বাচিত সার্ভিসসমূহ</span>
+                  <span className="text-slate-300">Selected Services</span>
                   <span className="font-semibold text-emerald-300">
                     {[
-                      confirmationData.selectedServices?.hotel ? '🏨 হোটেল' : null,
-                      confirmationData.selectedServices?.transport ? '🚗 পরিবহন' : null,
-                      confirmationData.selectedServices?.dining ? '🍽️ ডাইনিং' : null
-                    ].filter(Boolean).join(' • ') || 'বেস প্যাকেজ'}
+                      confirmationData.selectedServices?.hotel ? '🏨 Hotel' : null,
+                      confirmationData.selectedServices?.transport ? '🚗 Transport' : null,
+                      confirmationData.selectedServices?.dining ? '🍽️ Dining' : null
+                    ].filter(Boolean).join(' • ') || 'Base Package'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-white/15 text-sm">
-                  <span className="font-bold text-[#69EBDA]">সর্বমোট মূল্য</span>
+                  <span className="font-bold text-[#69EBDA]">Total Price</span>
                   <span className="font-black text-white text-base">{confirmationData.totalPrice}</span>
                 </div>
               </>
@@ -489,7 +489,7 @@ export const BookingInquiryWidget = ({
               className="w-full py-3.5 px-5 rounded-2xl bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400/50 text-emerald-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 text-emerald-300" />
-              <span>তাৎক্ষণিক চ্যাটের জন্য হোয়াটসঅ্যাপে যান</span>
+              <span>Connect on WhatsApp for Instant Chat</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
 
@@ -499,7 +499,7 @@ export const BookingInquiryWidget = ({
                 onClick={handleReset}
                 className="flex-1 py-3 px-4 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-white/20 text-xs text-white font-semibold transition-colors cursor-pointer"
               >
-                আরেকটি বুকিং করুন
+                Make Another Booking
               </button>
 
               {isOpenAsModal && onClose && (
@@ -508,7 +508,7 @@ export const BookingInquiryWidget = ({
                   onClick={onClose}
                   className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-teal-400 to-cyan-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  উইন্ডো বন্ধ করুন
+                  Close Window
                 </button>
               )}
             </div>
@@ -520,7 +520,7 @@ export const BookingInquiryWidget = ({
           {/* Selected Package Selector */}
           <div>
             <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#69EBDA] block mb-1">
-              নির্বাচিত প্যাকেজ ({currentPkg?.duration || '5 Days / 4 Nights'})
+              Selected Package ({currentPkg?.duration || '5 Days / 4 Nights'})
             </label>
             <select
               value={selectedPkgId}
@@ -529,7 +529,7 @@ export const BookingInquiryWidget = ({
             >
               {packagePool.map((p) => (
                 <option key={p.id} value={p.id} className="bg-slate-900 text-white font-medium">
-                  {p.shortTitle || p.title} ({p.duration}) — ${Number(p.price || 0).toFixed(2)}/জন
+                  {p.shortTitle || p.title} ({p.duration}) — ${Number(p.price || 0).toFixed(2)}/person
                 </option>
               ))}
             </select>
@@ -544,7 +544,7 @@ export const BookingInquiryWidget = ({
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-[#69EBDA]" />
                     <span className="text-xs font-extrabold text-white uppercase tracking-wider">
-                      ভ্রমণের তারিখ ও রিয়েল-টাইম স্লট ক্যালেন্ডার
+                      Travel Dates & Real-time Slot Calendar
                     </span>
                   </div>
                   <button
@@ -552,23 +552,23 @@ export const BookingInquiryWidget = ({
                     onClick={() => setShowCalendarGrid(!showCalendarGrid)}
                     className="text-[11px] font-bold text-[#69EBDA] hover:underline cursor-pointer"
                   >
-                    {showCalendarGrid ? 'সংক্ষিপ্ত করুন' : 'ক্যালেন্ডার খুলুন'}
+                    {showCalendarGrid ? 'Collapse' : 'Open Calendar'}
                   </button>
                 </div>
 
                 {/* Selected Check-in / Check-out Summary Pills */}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="p-2 rounded-xl bg-slate-800/70 border border-white/15">
-                    <span className="text-[10px] text-slate-300 block font-semibold">চেক-ইন (Check-in)</span>
+                    <span className="text-[10px] text-slate-300 block font-semibold">Check-in</span>
                     <span className="text-xs font-black text-[#69EBDA]">{checkInDate}</span>
                   </div>
                   <div className="p-2 rounded-xl bg-slate-800/70 border border-white/15">
-                    <span className="text-[10px] text-slate-300 block font-semibold">চেক-আউট (Check-out)</span>
+                    <span className="text-[10px] text-slate-300 block font-semibold">Check-out</span>
                     <span className="text-xs font-black text-cyan-300">{checkOutDate}</span>
                   </div>
                   <div className="p-2 rounded-xl bg-[#69EBDA]/15 border border-[#69EBDA]/35">
-                    <span className="text-[10px] text-slate-200 block font-semibold">মোট দিন (Days)</span>
-                    <span className="text-xs font-black text-white">{selectedDays} দিন</span>
+                    <span className="text-[10px] text-slate-200 block font-semibold">Total Days</span>
+                    <span className="text-xs font-black text-white">{selectedDays} Days</span>
                   </div>
                 </div>
 
@@ -650,7 +650,7 @@ export const BookingInquiryWidget = ({
                                     Already Booked for this period
                                   </p>
                                   <p className="text-[9px] text-slate-300 mt-0.5">
-                                    এই তারিখে বুকিং পূর্ণ রয়েছে
+                                    Fully booked for this date
                                   </p>
                                 </motion.div>
                               )}
@@ -663,10 +663,10 @@ export const BookingInquiryWidget = ({
                     {/* Legend */}
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/10 text-[10px] text-slate-300">
                       <span className="flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[#69EBDA] inline-block" /> নির্বাচিত তারিখ
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[#69EBDA] inline-block" /> Selected Date
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-rose-900 border border-rose-400/50 inline-block" /> বুকড (Locked)
+                        <span className="w-2.5 h-2.5 rounded-sm bg-rose-900 border border-rose-400/50 inline-block" /> Booked (Locked)
                       </span>
                     </div>
                   </div>
@@ -680,8 +680,8 @@ export const BookingInquiryWidget = ({
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-extrabold text-white block">মোট ভ্রমণকারী (Guests Count)</span>
-                    <span className="text-[10px] text-slate-300">ডিফল্ট: {defaultAdminGuests} জন (পরিবর্তনযোগ্য)</span>
+                    <span className="text-xs font-extrabold text-white block">Total Travelers (Guests Count)</span>
+                    <span className="text-[10px] text-slate-300">Default: {defaultAdminGuests} Guests (Adjustable)</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -706,7 +706,7 @@ export const BookingInquiryWidget = ({
               {/* 3. MODULAR 3-SERVICE MULTI-SELECT CARDS */}
               <div className="space-y-2">
                 <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#69EBDA] block">
-                  ৩-ইন-১ মডুলার সার্ভিস নির্বাচন করুন (১টি, ২টি বা সবগুলো)
+                  Select 3-in-1 Modular Services (1, 2, or all)
                 </label>
 
                 {/* [x] Hotel Accommodation */}
@@ -726,9 +726,9 @@ export const BookingInquiryWidget = ({
                     </div>
                     <Hotel className="w-4 h-4 text-[#69EBDA] shrink-0" />
                     <div>
-                      <span className="text-xs font-extrabold text-white block">Hotel Accommodation (হোটেল ও রুম)</span>
+                      <span className="text-xs font-extrabold text-white block">Hotel Accommodation</span>
                       <span className="text-[10px] text-slate-300">
-                        ${hotelPerDayRate}/দিন × {selectedDays} দিন
+                        ${hotelPerDayRate}/day × {selectedDays} days
                       </span>
                     </div>
                   </div>
@@ -754,9 +754,9 @@ export const BookingInquiryWidget = ({
                     </div>
                     <Car className="w-4 h-4 text-cyan-300 shrink-0" />
                     <div>
-                      <span className="text-xs font-extrabold text-white block">Transport Service (পরিবহন ও গাড়ি)</span>
+                      <span className="text-xs font-extrabold text-white block">Transport Service</span>
                       <span className="text-[10px] text-slate-300">
-                        ${transportPerDayPerPersonRate}/জন/দিন × {guestsCount} জন × {selectedDays} দিন
+                        ${transportPerDayPerPersonRate}/person/day × {guestsCount} guests × {selectedDays} days
                       </span>
                     </div>
                   </div>
@@ -782,9 +782,9 @@ export const BookingInquiryWidget = ({
                     </div>
                     <UtensilsCrossed className="w-4 h-4 text-amber-300 shrink-0" />
                     <div>
-                      <span className="text-xs font-extrabold text-white block">Dining Service (৩ বেলা খাবার ও ডাইনিং)</span>
+                      <span className="text-xs font-extrabold text-white block">Dining Service (3 Meals & Dining)</span>
                       <span className="text-[10px] text-slate-300">
-                        ${diningPerDayPerPersonRate}/জন/দিন × {guestsCount} জন × {selectedDays} দিন
+                        ${diningPerDayPerPersonRate}/person/day × {guestsCount} guests × {selectedDays} days
                       </span>
                     </div>
                   </div>
@@ -800,14 +800,14 @@ export const BookingInquiryWidget = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-                পূর্ণ নাম *
+                Full Name *
               </label>
               <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-800/50 border border-white/20 focus-within:border-[#69EBDA]">
                 <User className="w-4 h-4 text-[#69EBDA] shrink-0" />
                 <input
                   type="text"
                   required
-                  placeholder="যেমন: তানভীর আহমেদ"
+                  placeholder="e.g. Tanvir Ahmed"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full bg-transparent text-xs sm:text-sm text-white font-medium placeholder-slate-400 focus:outline-none"
@@ -817,14 +817,14 @@ export const BookingInquiryWidget = ({
 
             <div>
               <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-                মোবাইল / হোয়াটসঅ্যাপ *
+                Mobile / WhatsApp *
               </label>
               <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-800/50 border border-white/20 focus-within:border-[#69EBDA]">
                 <Phone className="w-4 h-4 text-[#69EBDA] shrink-0" />
                 <input
                   type="tel"
                   required
-                  placeholder="+৮৮০ ১৭১২-৩৪৫৬৭৮"
+                  placeholder="+880 1712-345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-transparent text-xs sm:text-sm text-white font-medium placeholder-slate-400 focus:outline-none"
@@ -835,7 +835,7 @@ export const BookingInquiryWidget = ({
 
           <div>
             <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-              ইমেইল ঠিকানা *
+              Email Address *
             </label>
             <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-800/50 border border-white/20 focus-within:border-[#69EBDA]">
               <Mail className="w-4 h-4 text-[#69EBDA] shrink-0" />
@@ -854,12 +854,12 @@ export const BookingInquiryWidget = ({
             <>
               <div>
                 <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-                  বিশেষ অনুরোধ (ঐচ্ছিক)
+                  Special Requests (Optional)
                 </label>
                 <div className="p-2.5 rounded-2xl bg-slate-800/50 border border-white/20 focus-within:border-[#69EBDA]">
                   <textarea
                     rows={2}
-                    placeholder="রুমের পছন্দ, খাবার বা ফ্লাইট সংক্রান্ত নোট..."
+                    placeholder="Room preferences, dietary requirements, or flight notes..."
                     value={specialNotes}
                     onChange={(e) => setSpecialNotes(e.target.value)}
                     className="w-full bg-transparent text-xs text-white font-medium placeholder-slate-400 focus:outline-none resize-none"
@@ -871,24 +871,24 @@ export const BookingInquiryWidget = ({
               <div className="p-4 rounded-2xl bg-slate-900/75 border border-[#69EBDA]/40 space-y-2">
                 <div className="space-y-1 text-[11px] text-slate-300 border-b border-white/10 pb-2">
                   <div className="flex justify-between">
-                    <span>বেস প্যাকেজ (${baseUnitPrice} × {guestsCount} জন):</span>
+                    <span>Base Package (${baseUnitPrice} × {guestsCount} guests):</span>
                     <span className="font-bold text-white">${basePackageCost.toFixed(2)}</span>
                   </div>
                   {selectedServices.hotel && (
                     <div className="flex justify-between text-teal-200">
-                      <span>হোটেল চার্জ (${hotelPerDayRate} × {selectedDays} দিন):</span>
+                      <span>Hotel Charge (${hotelPerDayRate} × {selectedDays} days):</span>
                       <span className="font-bold">+${hotelCost.toFixed(2)}</span>
                     </div>
                   )}
                   {selectedServices.transport && (
                     <div className="flex justify-between text-cyan-200">
-                      <span>পরিবহন (${transportPerDayPerPersonRate} × {guestsCount} জন × {selectedDays} দিন):</span>
+                      <span>Transport (${transportPerDayPerPersonRate} × {guestsCount} guests × {selectedDays} days):</span>
                       <span className="font-bold">+${transportCost.toFixed(2)}</span>
                     </div>
                   )}
                   {selectedServices.dining && (
                     <div className="flex justify-between text-amber-200">
-                      <span>ডাইনিং (${diningPerDayPerPersonRate} × {guestsCount} জন × {selectedDays} দিন):</span>
+                      <span>Dining (${diningPerDayPerPersonRate} × {guestsCount} guests × {selectedDays} days):</span>
                       <span className="font-bold">+${diningCost.toFixed(2)}</span>
                     </div>
                   )}
@@ -897,13 +897,13 @@ export const BookingInquiryWidget = ({
                 <div className="flex items-center justify-between pt-1">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-300 block">
-                      সর্বমোট মূল্য ({selectedDays} দিন, {guestsCount} জন)
+                      Total Price ({selectedDays} Days, {guestsCount} Guests)
                     </span>
                     <span className="text-2xl font-black text-white font-['Outfit',sans-serif]">
                       ${totalPrice}
                     </span>
                     <span className="text-[11px] text-[#69EBDA] font-bold block">
-                      অগ্রিম বুকিং ({advancePercent}%): মাত্র ${advanceAmount} এখন পরিশোধযোগ্য
+                      Advance Booking ({advancePercent}%): Only ${advanceAmount} payable now
                     </span>
                   </div>
                 </div>
@@ -916,29 +916,29 @@ export const BookingInquiryWidget = ({
             <>
               <div>
                 <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-                  অনুসন্ধানের ধরণ
+                  Inquiry Topic
                 </label>
                 <select
                   value={inquiryTopic}
                   onChange={(e) => setInquiryTopic(e.target.value)}
                   className="w-full p-3 rounded-2xl bg-slate-800/55 border border-white/20 text-xs text-white font-bold focus:outline-none focus:border-[#69EBDA] cursor-pointer"
                 >
-                  <option value="কাস্টম তারিখ ও রুটের নমনীয়তা" className="bg-slate-900 text-white">কাস্টম তারিখ ও রুটের নমনীয়তা</option>
-                  <option value="প্রাইভেট গ্রুপ ও ফ্যামিলি ডিসকাউন্ট" className="bg-slate-900 text-white">প্রাইভেট গ্রুপ ও ফ্যামিলি ডিসকাউন্ট</option>
-                  <option value="ভিসা সহায়তা ও ট্রাভেল পারমিট" className="bg-slate-900 text-white">ভিসা সহায়তা ও ট্রাভেল পারমিট</option>
-                  <option value="বিশেষ খাবারের ব্যবস্থা ও প্রবেশযোগ্যতা" className="bg-slate-900 text-white">বিশেষ খাবারের ব্যবস্থা ও প্রবেশযোগ্যতা</option>
+                  <option value="Custom Date & Route Flexibility" className="bg-slate-900 text-white">Custom Date & Route Flexibility</option>
+                  <option value="Private Group & Family Discounts" className="bg-slate-900 text-white">Private Group & Family Discounts</option>
+                  <option value="Visa Assistance & Travel Permits" className="bg-slate-900 text-white">Visa Assistance & Travel Permits</option>
+                  <option value="Special Dietary Needs & Accessibility" className="bg-slate-900 text-white">Special Dietary Needs & Accessibility</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-200 block mb-1">
-                  আপনার বিস্তারিত প্রশ্ন বা বার্তা *
+                  Your Detailed Questions or Message *
                 </label>
                 <div className="p-3 rounded-2xl bg-slate-800/50 border border-white/20 focus-within:border-[#69EBDA]">
                   <textarea
                     rows={4}
                     required
-                    placeholder="এই ভ্রমণ প্যাকেজ সম্পর্কে আপনার যা কিছু জানার আছে লিখুন..."
+                    placeholder="Write whatever you'd like to know about this travel package..."
                     value={inquiryMessage}
                     onChange={(e) => setInquiryMessage(e.target.value)}
                     className="w-full bg-transparent text-xs text-white font-medium placeholder-slate-400 focus:outline-none resize-none"
@@ -958,13 +958,13 @@ export const BookingInquiryWidget = ({
               {activeTab === 'booking' ? (
                 <>
                   <CreditCard className="w-4 h-4 text-slate-950" />
-                  <span>{isSubmitting ? 'স্লট লক ও বুকিং হচ্ছে...' : 'এখনই বুক করুন (Book Now)'}</span>
+                  <span>{isSubmitting ? 'Locking slot & booking...' : 'Book Now'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4 text-slate-950" />
-                  <span>{isSubmitting ? 'বার্তা পাঠানো হচ্ছে...' : 'অনুসন্ধান বার্তা পাঠান'}</span>
+                  <span>{isSubmitting ? 'Sending message...' : 'Send Inquiry Message'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -976,13 +976,13 @@ export const BookingInquiryWidget = ({
               className="w-full py-3 px-5 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 text-emerald-300" />
-              <span>হোয়াটসঅ্যাপে জিজ্ঞাসা করুন (Inquire on WhatsApp)</span>
+              <span>Inquire on WhatsApp</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
 
             <div className="mt-1 text-center text-[11px] text-slate-200 flex items-center justify-center gap-1.5 font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="line-clamp-1">{currentPkg?.cancellationPolicy || 'ভ্রমণের ৭ দিন পূর্বে বাতিল করলে ৯০% রিফান্ড প্রযোজ্য'}</span>
+              <span className="line-clamp-1">{currentPkg?.cancellationPolicy || '90% refund applicable if cancelled 7 days prior to travel'}</span>
             </div>
           </div>
         </form>

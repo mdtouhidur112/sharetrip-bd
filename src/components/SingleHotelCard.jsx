@@ -6,7 +6,7 @@ import { HotelReviewService } from '../services/hotelReviewService';
 import { useAuth } from '../context/AuthContext';
 
 export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
-  const { user, wishlist = [], toggleWishlist } = useAuth();
+  const { user, wishlist = [], toggleWishlist, openAuthModal } = useAuth();
   const userKey = user?.email || user?.id || 'guest_user';
 
   const [hoverStars, setHoverStars] = useState(0);
@@ -14,11 +14,15 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
 
   const handleCardRating = (e, hotelId, starValue) => {
     e.stopPropagation();
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
     const result = HotelReviewService.submitQuickRating(
       hotelId,
       starValue,
       userKey,
-      user?.name || 'গেস্ট ট্রাভেলার'
+      user?.name || 'Guest Traveler'
     );
     setRatingFeedback({
       message: result.message,
@@ -42,7 +46,7 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
     hotel.image ||
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
   const perDayPrice = Number(hotel.bookingPrice ?? hotel.pricePerNight ?? 0);
-  const dayLabel = hotel.bookingDays || '১ দিন';
+  const dayLabel = hotel.bookingDays || '1 Day';
   const isFav = wishlist.includes(hotel.id);
 
   const ratingMeta = HotelReviewService.getHotelRatingMeta(
@@ -83,7 +87,7 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
             : 'bg-slate-900/60 hover:bg-slate-900/85 border-white/30 text-white hover:text-rose-400'
           }
         `}
-        title={isFav ? 'উইশলিস্ট থেকে সরান' : 'উইশলিস্টে যুক্ত করুন'}
+        title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
       >
         <Heart
           className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-all duration-200 ${
@@ -159,11 +163,11 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
         <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-300/80 dark:border-white/10 space-y-2">
           <div className="flex items-baseline justify-between gap-1 sm:gap-2">
             <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-extrabold text-slate-600 dark:text-slate-400">
-              ভাড়া
+              Rent
             </span>
             <div className="text-right">
               <span className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white font-['Outfit',sans-serif]">
-                ৳ {perDayPrice.toLocaleString('en-IN')}
+                BDT {perDayPrice.toLocaleString('en-IN')}
               </span>
               <span className="text-[10px] sm:text-xs font-bold text-teal-700 dark:text-[#69EBDA] ml-1">
                 / {dayLabel}
@@ -214,8 +218,8 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
                         className="p-0.5 rounded transition-transform hover:scale-125 active:scale-95 cursor-pointer"
                         title={
                           userPrev
-                            ? `আপনার রেটিং: ${userPrev}★ (ক্লিক করে রেটিং বাড়াতে পারেন)`
-                            : `${starIdx} স্টার রেটিং দিন`
+                            ? `Your rating: ${userPrev}★ (Click to update rating)`
+                            : `Rate ${starIdx} stars`
                         }
                       >
                         <Star
@@ -234,7 +238,7 @@ export const SingleHotelCard = ({ hotel, onSelectHotel }) => {
                 </span>
               </div>
               <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                ({ratingMeta.totalReviews} রিভিউ)
+                ({ratingMeta.totalReviews} reviews)
               </span>
             </div>
 

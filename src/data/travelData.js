@@ -1678,74 +1678,7 @@ export const AGENCY_SERVICES = [
   }
 ];
 
-export const CLIENT_REVIEWS = [
-  {
-    id: 'rev-1',
-    name: 'আরিফ হাসান',
-    location: 'ঢাকা, বাংলাদেশ',
-    trip: 'বালি আইল্যান্ড ও নুসা পেনিডা ট্যুর',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    quote: 'হোটেল নির্বাচন এবং দ্রুত সাপোর্ট ছিল অসাধারণ! উবুদের প্রাইভেট পুল ভিলা এবং বিমানবন্দরে ভিআইপি ফাস্ট-ট্র্যাক আমাদের পারিবারিক ভ্রমণকে সত্যিই রাজকীয় ও আনন্দদায়ক করে তুলেছিল।',
-    verified: true,
-    date: 'অক্টোবর ২০২৬'
-  },
-  {
-    id: 'rev-2',
-    name: 'সারা আহমেদ',
-    location: 'লন্ডন, যুক্তরাজ্য',
-    trip: 'আমালফি কোস্ট ও ক্যাপ্রি ইয়ট ওডিসি',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
-    quote: 'ক্যাপ্রিতে আমাদের ব্যক্তিগত রিভা স্পিডবোট থেকে শুরু করে পোজিতানোর ক্লিফসাইড স্যুট—সবকিছুই ছিল নিখুঁত। রাতের খাবার পরিবর্তনের প্রয়োজনে হোয়াটসঅ্যাপ কনসিয়ার্জ ২ মিনিটেরও কম সময়ে সাহায্য করেছিল।',
-    verified: true,
-    date: 'সেপ্টেম্বর ২০২৬'
-  },
-  {
-    id: 'rev-3',
-    name: 'তানভীর রহমান',
-    location: 'চট্টগ্রাম, বাংলাদেশ',
-    trip: 'সুইস আল্পস গ্লেসিয়ার এক্সপ্রেস ও জারম্যাট',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-    quote: 'গ্লেসিয়ার এক্সপ্রেসের এক্সিলেন্স ক্লাস সিট এবং ম্যাটারহর্নে সূর্যোদয়ের দৃশ্য আমার সব প্রত্যাশাকে ছাড়িয়ে গেছে। ভ্রমণ পরিকল্পনার প্রতিটি বিশদে তাদের যত্ন ও নিখুঁত আয়োজন ছিল বিশ্বমানের।',
-    verified: true,
-    date: 'আগস্ট ২০২৬'
-  },
-  {
-    id: 'rev-4',
-    name: 'এলেনা ভ্যান্স',
-    location: 'জুরিখ, সুইজারল্যান্ড',
-    trip: 'কিয়োটো অটাম লণ্ঠন ও বাঁশবন হেরিটেজ',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
-    quote: '১৫তম প্রজন্মের গ্র্যান্ডমাস্টারের সাথে চা অনুষ্ঠান এবং আরাশিয়ামার রিয়োকানের উষ্ণ প্রস্রবণে সময় কাটানো ছিল যেন জাদুকরী স্বপ্ন। বিলাসবহুল ভ্রমণের ক্ষেত্রে এথেরিয়া সেরা মান নির্ধারণ করেছে।',
-    verified: true,
-    date: 'জুলাই ২০২৬'
-  },
-  {
-    id: 'rev-5',
-    name: 'ডেভিড মিলার',
-    location: 'নিউইয়র্ক, যুক্তরাষ্ট্র',
-    trip: 'মাচু পিচু ও পেরুর পবিত্র ইনকা উপত্যকা',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-    quote: 'মাচু পিচুতে আমাদের প্রত্নতাত্ত্বিক গাইড ছিলেন অত্যন্ত জ্ঞানী। ভিস্টাডোম প্যানোরামিক ট্রেন থেকে শুরু করে বেলমন্ড প্যালেসের আতিথেয়তা—সবকিছুই ছিল অসাধারণ ও ভিড়মুক্ত।',
-    verified: true,
-    date: 'জুন ২০২৬'
-  },
-  {
-    id: 'rev-6',
-    name: 'নাদিয়া করিম',
-    location: 'সিলেট, বাংলাদেশ',
-    trip: 'সান্তোরিনি সানসেট ভিলা ও আগ্নেয়গিরি ক্রুজ',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
-    quote: 'ওইয়ার সাদা গুহা স্যুট এবং ব্যক্তিগত হিটেড পুল থেকে সাগরে সূর্য ডোবার দৃশ্য ছিল শ্বাসরুদ্ধকর সুন্দর। অবতরণ থেকে শুরু করে বিদায় পর্যন্ত প্রকৃত ভিআইপি আতিথেয়তা পেয়েছি!',
-    verified: true,
-    date: 'মে ২০২৬'
-  }
-];
+export const CLIENT_REVIEWS = [];
 
 export const OFFICE_CONTACT_INFO = {
   hours: {
@@ -1817,7 +1750,7 @@ export const DEFAULT_HERO_BANNER = {
 
 export const DEFAULT_BRANDING = {
   id: 'primary',
-  logoUrl: '',
+  logoUrl: '/stb-logo.png',
   logoType: 'both',
   logoWidth: 40,
   logoHeight: 40,

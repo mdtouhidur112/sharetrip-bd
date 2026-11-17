@@ -116,8 +116,8 @@ export const SharePopupModal = ({ isOpen, onClose, shareUrl, shareTitle }) => {
               <Share2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold">ওয়েবসাইট শেয়ার করুন</h3>
-              <p className="text-[11px] text-slate-400">যেকোনো অ্যাপ বা লিংকের মাধ্যমে শেয়ার করুন</p>
+              <h3 className="text-base font-extrabold">Share Website</h3>
+              <p className="text-[11px] text-slate-400">Share via any app or link</p>
             </div>
           </div>
           <button
@@ -154,7 +154,7 @@ export const SharePopupModal = ({ isOpen, onClose, shareUrl, shareTitle }) => {
             className="w-full py-2.5 rounded-2xl bg-[#69EBDA]/15 hover:bg-[#69EBDA]/25 border border-[#69EBDA]/40 text-[#69EBDA] text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
-            <span>ডিভাইসের অন্যান্য অ্যাপ দিয়ে শেয়ার করুন</span>
+            <span>Share via other device apps</span>
           </button>
         )}
 
@@ -171,7 +171,7 @@ export const SharePopupModal = ({ isOpen, onClose, shareUrl, shareTitle }) => {
             className="px-3.5 py-2 rounded-xl bg-[#69EBDA] text-slate-950 text-xs font-black flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'কপি হয়েছে' : 'কপি লিংক'}</span>
+            <span>{copied ? 'Copied' : 'Copy Link'}</span>
           </button>
         </div>
       </div>
