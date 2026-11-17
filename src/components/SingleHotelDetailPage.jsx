@@ -715,10 +715,15 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, initialFilter = nul
     );
   }, [isTransport, routeFares, routeFrom, routeTo]);
 
-  const perDayPrice =
+  const originalPerDayPrice =
     isTransport && matchedRouteFare && Number(matchedRouteFare.price) > 0
       ? Number(matchedRouteFare.price)
       : Number(hotel.bookingPrice ?? hotel.pricePerNight ?? 3500);
+  const serviceDiscountPercent = Math.min(100, Math.max(0, Number(hotel.discountPercent ?? 0)));
+  const perDayPrice =
+    serviceDiscountPercent > 0
+      ? Math.round(originalPerDayPrice * (1 - serviceDiscountPercent / 100))
+      : originalPerDayPrice;
   const effectiveCheckOutDate = checkOutDate || (checkInDate ? addDaysISO(checkInDate, 1) : addDaysISO(todayISO, 1));
   const calculatedDays = useMemo(() => {
     if (isRestaurant) {
@@ -1459,12 +1464,28 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, initialFilter = nul
                 <Tag className="w-3.5 h-3.5" />
                 Daily Booking Fare
               </span>
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-2.5">
                 <span className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white font-['Outfit',sans-serif]">
                   BDT {perDayPrice.toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400">
                   / {hotel.bookingDays || 'Per Day'}
+                </span>
+                {serviceDiscountPercent > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400 text-xs font-black">
+                    {serviceDiscountPercent}% OFF
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs">
+                <span className="font-bold text-slate-500 dark:text-slate-400">
+                  Current Price:{' '}
+                  <span className={serviceDiscountPercent > 0 ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200 font-extrabold'}>
+                    BDT {originalPerDayPrice.toLocaleString('en-IN')}
+                  </span>
+                </span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  Discount Price: BDT {perDayPrice.toLocaleString('en-IN')}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -1623,10 +1644,19 @@ export const SingleHotelDetailPage = ({ hotel: initialHotel, initialFilter = nul
                 </h3>
               </div>
               <div className="text-right">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Per Day</span>
-                <p className="text-base sm:text-lg font-bold text-teal-700 dark:text-[#69EBDA]">
-                  BDT {perDayPrice.toLocaleString('en-IN')}
-                </p>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {serviceDiscountPercent > 0 ? `Discounted (${serviceDiscountPercent}% OFF)` : 'Per Day'}
+                </span>
+                <div className="flex items-baseline justify-end gap-2">
+                  {serviceDiscountPercent > 0 && (
+                    <span className="text-xs font-bold text-slate-400 line-through">
+                      BDT {originalPerDayPrice.toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  <p className="text-base sm:text-lg font-bold text-teal-700 dark:text-[#69EBDA]">
+                    BDT {perDayPrice.toLocaleString('en-IN')}
+                  </p>
+                </div>
               </div>
             </div>
 

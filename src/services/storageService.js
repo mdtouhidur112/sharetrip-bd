@@ -929,8 +929,13 @@ export const StorageService = {
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('destinations').upsert(destinationToRow(targetDest));
-        if (error) console.error('Supabase destination upsert ERROR:', error);
+        const { error } = await supabase
+          .from('destinations')
+          .upsert(destinationToRow(targetDest), { onConflict: 'id' });
+        if (error) {
+          console.error('Supabase destination upsert ERROR:', error);
+          throw error;
+        }
       } catch (err) {
         console.error('Supabase destination save exception:', err);
       }

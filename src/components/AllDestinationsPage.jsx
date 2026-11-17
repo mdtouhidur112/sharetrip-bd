@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowUpRight, Compass, Sun, Mountain, Trees, Sparkles, Search, Hotel } from 'lucide-react';
 import { StorageService } from '../services/storageService';
+import { DestinationInfoModal } from './DestinationInfoModal';
 
 export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCategory }) => {
   const [destinations, setDestinations] = useState(() => StorageService.getDestinations());
   const [allPackages, setAllPackages] = useState(() => StorageService.getPackages());
   const [secText, setSecText] = useState(() => StorageService.getSectionSettings().allDestinationsPage);
   const [searchTerm, setSearchTerm] = useState('');
+  const [previewDestination, setPreviewDestination] = useState(null);
 
   useEffect(() => {
     const syncDestinations = () => setDestinations(StorageService.getDestinations());
@@ -165,9 +167,18 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
                       <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-['Outfit',sans-serif] truncate">
                         {cat.title}
                       </h3>
-                      <div className="w-10 h-10 rounded-xl bg-white/10 group-hover:bg-[#69EBDA] group-hover:text-slate-950 text-white flex items-center justify-center transition-all duration-300 border border-white/20 group-hover:border-[#69EBDA] shadow-md shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewDestination({ dest: cat, packageCount });
+                        }}
+                        onMouseEnter={() => setPreviewDestination({ dest: cat, packageCount })}
+                        title="View Destination Info"
+                        className="w-10 h-10 rounded-xl bg-white/10 hover:bg-[#69EBDA] hover:text-slate-950 text-white flex items-center justify-center transition-all duration-300 border border-white/20 hover:border-[#69EBDA] shadow-md shrink-0 cursor-pointer"
+                      >
                         <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                      </div>
+                      </button>
                     </div>
 
                     {(cat.subtitle || cat.tagline) && (
@@ -197,6 +208,13 @@ export const AllDestinationsPage = ({ onBack, onSelectDestination, selectedCateg
           })}
         </div>
       )}
+
+      <DestinationInfoModal
+        destination={previewDestination?.dest}
+        packageCount={previewDestination?.packageCount || 0}
+        onClose={() => setPreviewDestination(null)}
+        onExplore={onSelectDestination}
+      />
     </section>
   );
 };

@@ -56,6 +56,7 @@ export const normalizeTransportToCardShape = (item) => {
       : item.description || item.model || '',
     shortInfoItems,
     bookingPrice: price,
+    discountPercent: Math.min(100, Math.max(0, Number(item.discountPercent ?? 0))),
     bookingDays: isTrip ? '১ ট্রিপ' : '১ দিন',
     location: item.airports || item.categoryName || item.category || 'ট্রান্সপোর্ট সার্ভিস',
     details: [
@@ -110,6 +111,7 @@ export const normalizeRestaurantToCardShape = (rest) => {
     shortDescription: `${rest.mealPlanType || ''}${rest.badge ? ` • ${rest.badge}` : ''}`.trim(),
     shortInfoItems,
     bookingPrice: price,
+    discountPercent: Math.min(100, Math.max(0, Number(rest.discountPercent ?? 0))),
     bookingDays: '১ দিন (জনপ্রতি)',
     location: rest.badge || 'রেস্টুরেন্ট ও ডাইনিং',
     details: [

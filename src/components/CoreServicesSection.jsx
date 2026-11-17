@@ -13,21 +13,22 @@ import {
 import { StorageService } from '../services/storageService';
 
 export const CoreServicesSection = ({ onSelectService }) => {
-  const [counts, setCounts] = useState(() => ({
-    hotels: StorageService.getHotels().length,
-    transport: StorageService.getTransports().length,
-    restaurant: StorageService.getRestaurants().length
+  const [serviceItems, setServiceItems] = useState(() => ({
+    hotels: StorageService.getHotels() || [],
+    transport: StorageService.getTransports() || [],
+    restaurant: StorageService.getRestaurants() || []
   }));
+  const [rotationTick, setRotationTick] = useState(0);
   const [servicesControl, setServicesControl] = useState(() => StorageService.getServicesControl());
   const [secText, setSecText] = useState(() => StorageService.getSectionSettings().coreServices);
   const [disabledServiceModal, setDisabledServiceModal] = useState(null);
 
   useEffect(() => {
-    const syncCounts = () => {
-      setCounts({
-        hotels: StorageService.getHotels().length,
-        transport: StorageService.getTransports().length,
-        restaurant: StorageService.getRestaurants().length
+    const syncItems = () => {
+      setServiceItems({
+        hotels: StorageService.getHotels() || [],
+        transport: StorageService.getTransports() || [],
+        restaurant: StorageService.getRestaurants() || []
       });
     };
     const syncServicesControl = () => {
@@ -37,20 +38,45 @@ export const CoreServicesSection = ({ onSelectService }) => {
       setSecText(StorageService.getSectionSettings().coreServices);
     };
 
-    window.addEventListener('app:hotels-updated', syncCounts);
-    window.addEventListener('app:transports-updated', syncCounts);
-    window.addEventListener('app:restaurants-updated', syncCounts);
+    window.addEventListener('app:hotels-updated', syncItems);
+    window.addEventListener('app:transports-updated', syncItems);
+    window.addEventListener('app:restaurants-updated', syncItems);
     window.addEventListener('app:services-control-updated', syncServicesControl);
     window.addEventListener('app:section-settings-updated', syncSection);
 
     return () => {
-      window.removeEventListener('app:hotels-updated', syncCounts);
-      window.removeEventListener('app:transports-updated', syncCounts);
-      window.removeEventListener('app:restaurants-updated', syncCounts);
+      window.removeEventListener('app:hotels-updated', syncItems);
+      window.removeEventListener('app:transports-updated', syncItems);
+      window.removeEventListener('app:restaurants-updated', syncItems);
       window.removeEventListener('app:services-control-updated', syncServicesControl);
       window.removeEventListener('app:section-settings-updated', syncSection);
     };
   }, []);
+
+  // Rotate each service card's package default photo every 6 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRotationTick((prev) => prev + 1);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const extractServiceDefaultPhotos = (items = []) => {
+    const seen = new Set();
+    const list = [];
+    items.forEach((item) => {
+      const url = String(item?.defaultPhoto || item?.photo || item?.image || '').trim();
+      if (url && !seen.has(url)) {
+        seen.add(url);
+        list.push(url);
+      }
+    });
+    return list;
+  };
+
+  const hotelPhotos = extractServiceDefaultPhotos(serviceItems.hotels);
+  const transportPhotos = extractServiceDefaultPhotos(serviceItems.transport);
+  const restaurantPhotos = extractServiceDefaultPhotos(serviceItems.restaurant);
 
   const serviceCards = [
     {
@@ -58,7 +84,8 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Hotels & Resorts',
       subtitleBn: 'Luxury Stays & Resorts',
       summary: 'Luxury stays, curated rooms, floor & bath specs with real-time calendar availability.',
-      countBadge: servicesControl?.hotels === false ? 'Currently Off' : `${counts.hotels}+ Verified Stays`,
+      countBadge: servicesControl?.hotels === false ? 'Currently Off' : `${serviceItems.hotels.length}+ Verified Stays`,
+      photos: hotelPhotos,
       image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
       icon: Hotel
     },
@@ -67,7 +94,8 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Transport & Vehicles',
       subtitleBn: 'Private Cars & Tourist Fleet',
       summary: 'Private cars, executive microbuses, 4x4 tourist jeeps, and full scenic route coverage.',
-      countBadge: servicesControl?.transport === false ? 'Currently Off' : `${counts.transport}+ Vehicles`,
+      countBadge: servicesControl?.transport === false ? 'Currently Off' : `${serviceItems.transport.length}+ Vehicles`,
+      photos: transportPhotos,
       image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
       icon: Car
     },
@@ -76,7 +104,8 @@ export const CoreServicesSection = ({ onSelectService }) => {
       title: 'Restaurant & Dining',
       subtitleBn: 'Dining & 3-Time Meal Plans',
       summary: '3-time daily meal plans, signature buffets, traditional heritage thali, and live BBQ.',
-      countBadge: servicesControl?.restaurant === false ? 'Currently Off' : `${counts.restaurant}+ Dining Plans`,
+      countBadge: servicesControl?.restaurant === false ? 'Currently Off' : `${serviceItems.restaurant.length}+ Dining Plans`,
+      photos: restaurantPhotos,
       image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       icon: UtensilsCrossed
     }
@@ -121,6 +150,9 @@ export const CoreServicesSection = ({ onSelectService }) => {
       <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth pb-3 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:w-[85%] [&>*]:sm:w-[340px] [&>*]:md:w-auto [&>*]:snap-start relative z-10">
         {serviceCards.map((card, idx) => {
           const IconComponent = card.icon;
+          const activePhotos = card.photos.length > 0 ? card.photos : [card.image];
+          const activePhotoIndex = rotationTick % activePhotos.length;
+          const currentPhoto = activePhotos[activePhotoIndex] || card.image;
           return (
             <motion.div
               key={card.id}
@@ -139,14 +171,35 @@ export const CoreServicesSection = ({ onSelectService }) => {
               }}
               className="group relative rounded-[2rem] overflow-hidden cursor-pointer bg-[#5C6977]/90 dark:bg-slate-900/65 backdrop-blur-2xl border border-white/25 dark:border-white/15 hover:border-[#69EBDA]/70 shadow-[0_14px_38px_rgba(15,23,42,0.22),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:shadow-[0_24px_55px_rgba(105,235,218,0.28)] transition-colors duration-300 flex flex-col justify-between min-h-[390px]"
             >
-              {/* Cover Image with Dark Gradient Overlay */}
-              <div className="relative h-48 w-full overflow-hidden">
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+              {/* Cover Image with 6-Second Package Default Photo Rotation */}
+              <div className="relative h-48 w-full overflow-hidden bg-slate-950">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={`${card.id}-${activePhotoIndex}-${currentPhoto}`}
+                    src={currentPhoto}
+                    alt={card.title}
+                    initial={{ opacity: 0, scale: 1.08 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                </AnimatePresence>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1e293b]/95 via-slate-900/45 to-black/25" />
+
+                {/* Slide indicator dots when multiple package photos exist */}
+                {activePhotos.length > 1 && (
+                  <div className="absolute bottom-3 right-4 z-10 flex items-center gap-1 px-2 py-1 rounded-full bg-slate-950/55 backdrop-blur-md border border-white/15">
+                    {activePhotos.map((_, pIdx) => (
+                      <span
+                        key={`${card.id}-dot-${pIdx}`}
+                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                          pIdx === activePhotoIndex ? 'w-3.5 bg-[#69EBDA]' : 'w-1.5 bg-white/40'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* Top Floating Row: Glowing Icon Badge + Live Count Pill */}
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">

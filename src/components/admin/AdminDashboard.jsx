@@ -569,6 +569,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
     bookingPrice: '',
     bookingDays: '',
     vatTaxPercentage: '5',
+    discountPercent: '0',
     shortInfoItems: [{ icon: '', text: '' }],
     details: '',
     defaultPhoto: '',
@@ -761,7 +762,8 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
         locationLink: singleHotelForm.locationLink.trim(),
         checkInTime: singleHotelForm.checkInTime.trim(),
         checkOutTime: singleHotelForm.checkOutTime.trim(),
-        vatTaxPercentage: Number(singleHotelForm.vatTaxPercentage || 5)
+        vatTaxPercentage: Number(singleHotelForm.vatTaxPercentage || 5),
+        discountPercent: Math.min(100, Math.max(0, Number(singleHotelForm.discountPercent || 0)))
       });
     } else if (svcType === 'restaurant') {
       const cleanMealList = (list) =>
@@ -779,6 +781,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
         mealPlanType: singleHotelForm.shortDescription.trim() || 'AP (৩ বেলা সম্পূর্ণ খাবার)',
         badge: singleHotelForm.destinationId || 'Buffet & Dining',
         ratePerPerson: priceNum,
+        discountPercent: Math.min(100, Math.max(0, Number(singleHotelForm.discountPercent || 0))),
         rateLabel: `৳ ${priceNum.toLocaleString()} / জন`,
         tags: cleanShortInfo.map((x) => x.text.trim()).filter(Boolean),
         shortInfoItems: cleanShortInfo,
@@ -803,6 +806,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
         location: singleHotelForm.destinationId,
         bookingPrice: priceNum,
         pricePerNight: priceNum,
+        discountPercent: Math.min(100, Math.max(0, Number(singleHotelForm.discountPercent || 0))),
         bookingDays: singleHotelForm.bookingDays.trim() || '1',
         vatTaxPercentage: Number(singleHotelForm.vatTaxPercentage || 5),
         shortInfoItems: cleanShortInfo,
@@ -831,6 +835,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
       bookingPrice: '',
       bookingDays: '',
       vatTaxPercentage: '5',
+      discountPercent: '0',
       shortInfoItems: [{ icon: '', text: '' }],
       details: '',
       defaultPhoto: '',
@@ -2312,7 +2317,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                     </div>
 
                     {/* 5. Booking Price, Day & VAT/Tax (side by side) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                       <div className="space-y-1.5">
                         <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300">
                           Booking Price
@@ -2323,6 +2328,26 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                           value={singleHotelForm.bookingPrice}
                           onChange={(e) => setSingleHotelForm((prev) => ({ ...prev, bookingPrice: e.target.value }))}
                           placeholder="0.00"
+                          className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border outline-hidden transition-all ${
+                            isLight
+                              ? 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-[#69EBDA]'
+                              : 'bg-slate-950/60 border-slate-800 text-slate-100 focus:border-[#69EBDA]'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                          Discount (%)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          max="100"
+                          value={singleHotelForm.discountPercent}
+                          onChange={(e) => setSingleHotelForm((prev) => ({ ...prev, discountPercent: e.target.value }))}
+                          placeholder="0"
                           className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border outline-hidden transition-all ${
                             isLight
                               ? 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:border-[#69EBDA]'
@@ -2368,6 +2393,29 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                         />
                       </div>
                     </div>
+
+                    {Number(singleHotelForm.bookingPrice || 0) > 0 && (
+                      <div className={`px-4 py-2.5 rounded-xl border text-xs font-bold flex flex-wrap items-center gap-3 ${
+                        isLight
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                          : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                      }`}>
+                        <span>
+                          Regular Price: <span className="font-black">৳ {Number(singleHotelForm.bookingPrice || 0).toLocaleString()}</span>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Discount: <span className="font-black">{Math.min(100, Math.max(0, Number(singleHotelForm.discountPercent || 0)))}%</span>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Final Discount Price:{' '}
+                          <span className="font-black text-emerald-500">
+                            ৳ {Math.round(Number(singleHotelForm.bookingPrice || 0) * (1 - Math.min(100, Math.max(0, Number(singleHotelForm.discountPercent || 0))) / 100)).toLocaleString()}
+                          </span>
+                        </span>
+                      </div>
+                    )}
 
                     {/* 6. short data type unlimited short info builder (+ and - icons, react-icons import support) */}
                     <div className="space-y-2">
@@ -2820,6 +2868,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                                         : '',
                                     bookingDays: item.bookingDays || '1',
                                     vatTaxPercentage: item.vatTaxPercentage != null ? String(item.vatTaxPercentage) : '5',
+                                    discountPercent: item.discountPercent != null ? String(item.discountPercent) : '0',
                                     shortInfoItems:
                                       Array.isArray(item.shortInfoItems) && item.shortInfoItems.length > 0
                                         ? item.shortInfoItems
@@ -2927,6 +2976,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                                     bookingPrice: item.ratePerPerson != null ? String(item.ratePerPerson) : '',
                                     bookingDays: '1',
                                     vatTaxPercentage: '5',
+                                    discountPercent: item.discountPercent != null ? String(item.discountPercent) : '0',
                                     shortInfoItems:
                                       Array.isArray(item.shortInfoItems) && item.shortInfoItems.length > 0
                                         ? item.shortInfoItems
@@ -3047,6 +3097,7 @@ export const AdminDashboard = ({ currentAdmin: propCurrentAdmin, onExitAdmin }) 
                                     bookingPrice: item.bookingPrice != null ? String(item.bookingPrice) : '',
                                     bookingDays: item.bookingDays || '',
                                     vatTaxPercentage: item.vatTaxPercentage != null ? String(item.vatTaxPercentage) : '5',
+                                    discountPercent: item.discountPercent != null ? String(item.discountPercent) : '0',
                                     shortInfoItems:
                                       Array.isArray(item.shortInfoItems) && item.shortInfoItems.length > 0
                                         ? item.shortInfoItems
